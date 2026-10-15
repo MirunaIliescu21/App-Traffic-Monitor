@@ -1,0 +1,25 @@
+# Date generate la rulare - nu se versioneaza
+traffic_monitor.db
+traffic_monitor.db-wal
+traffic_monitor.db-shm
+*.db
+*.db-wal
+*.db-shm
+alerts.log
+alerts.log.bak
+
+# Adresele de test
+tests_real_keys.txt
+
+# Secrete
+.env
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+venv/
+
+# OS
+.DS_Store
