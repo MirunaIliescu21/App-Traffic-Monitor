@@ -73,6 +73,33 @@ Verificare:
 Limitare: fiind serviciu de utilizator (fara root), `psutil` vede doar procesele
 utilizatorului curent, nu si pe cele ale sistemului sau ale altor conturi.
 
+### Rularea ca serviciu pe alta masina Linux
+```
+sudo apt install git python3-venv libnotify-bin
+git clone https://github.com/MirunaIliescu21/App-Traffic-Monitor.git
+cd App-Traffic-Monitor
+python3 -m venv .venv
+.venv/bin/pip install psutil flask pytest
+.venv/bin/python -m pytest -q
+PYTHON=$PWD/.venv/bin/python ./install_service.sh
+systemctl --user status trafficmonitor-watcher trafficmonitor-dashboard
+```
+
+Folosim `venv` pentru ca Ubuntu 24.04 nu mai permite `pip install` direct in sistem. `PYTHON=...` ii spune scriptului sa foloseasca acel Python in servicii. Testele ar trebui sa dea 109 passed si 1 skipped. Apoi deschide `http://localhost:5000` pe acea masina.
+
+Important:
+- **Nu copia baza ta de date** pe cealalta masina. Ea contine istoricul tau, iar pentru pilot vrei sa pornesti de la zero.
+- Prima zi vor veni probabil mai multe alerte, fiindca aplicatia inca invata ce e normal pe acea masina. Nu o judeca dupa primele ore.
+- Persoana care foloseste masina trebuie sa stie ce se stocheaza (nume de procese, destinatii si ore, nu continutul traficului) si cum se dezinstaleaza (`./install_service.sh --uninstall`). Pentru clientii Infologica conteaza si acordul lor explicit.
+
+**Ce masori dupa 2-3 zile**
+1. Procentul de destinatii identificate. Pe acea masina:
+   ```
+   sqlite3 traffic_monitor.db "SELECT group_type, COUNT(*) FROM destination_status GROUP BY group_type;"
+   ```
+   Cate randuri sunt companii fata de domenii sau blocuri neidentificate.
+2. Cate alerte "de verificat" apar pe zi si cate sunt reale. Noteaza numarul din "Jurnal alerte" la sfarsitul fiecarei zile si care ti s-au parut false.
+
 ## Interfata web
 
 - **De verificat** - destinatii noi pentru programe cunoscute, cu butoanele
