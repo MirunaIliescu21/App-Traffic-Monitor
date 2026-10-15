@@ -1,4 +1,4 @@
-"""Teste pentru curațarea datelor vechi. Rulare: python3 -m pytest test_retention.py -v"""
+"""Teste pentru curatarea datelor vechi. Rulare: python3 -m pytest test_retention.py -v"""
 
 import sqlite3
 from datetime import datetime, timedelta, timezone
@@ -77,7 +77,7 @@ def test_memory_tables_are_never_touched(conn):
 
 def test_batching_deletes_everything(conn, monkeypatch):
     monkeypatch.setattr(retention, "BATCH_SIZE", 10)
-    add_conn(conn, 30, 35)  # 3 loturi pline + unul parțial
+    add_conn(conn, 30, 35)  # 3 loturi pline + unul partial
     add_conn(conn, 1, 4)
     out = retention.purge_old_data(conn, now=NOW)
     assert out["connections"] == 35

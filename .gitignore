@@ -7,6 +7,7 @@ traffic_monitor.db-shm
 *.db-shm
 alerts.log
 alerts.log.bak
+alerts_*.log
 
 # Adresele de test
 tests_real_keys.txt
@@ -23,3 +24,8 @@ venv/
 
 # OS
 .DS_Store
+
+# Sunt varinata de watcher si the test_watcher dinainte sa imbunataesc alertarea cand riscul nu se schimba in cazul simularii de beaconing
+strip_diacritics.py
+watcher_v6_hmm_bun.py
+watcherul_test_watcher_hmmm_bun.py

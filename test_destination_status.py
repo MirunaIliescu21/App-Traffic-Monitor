@@ -1,5 +1,5 @@
 """
-Teste pentru starea destinațiilor (de verificat / normal / suspect).
+Teste pentru starea destinatiilor (de verificat / normal / suspect).
 
 Rulare: python3 -m pytest test_destination_status.py -v
 """
@@ -102,7 +102,7 @@ def fake_conn(remote_ip, remote_port=443, local_port=50000, pid=1):
 
 
 class Harness:
-    """Ruleaza cicluri de colectare cu conexiuni și 'DNS' false; aduna notificarile."""
+    """Ruleaza cicluri de colectare cu conexiuni si 'DNS' false; aduna notificarile."""
 
     def __init__(self, conn, hostnames):
         self.conn = conn
@@ -115,7 +115,7 @@ class Harness:
         self.previous_open = set()
 
     def seed_known(self, process, group_key, group_type="domeniu"):
-        # ca în load_known_destinations: cheile cunoscute sunt la nivel de entitate
+        # ca in load_known_destinations: cheile cunoscute sunt la nivel de entitate
         self.known_keys.add((process, companies.entity_for(group_key, group_type)[0]))
         self.known_procs.add(process)
 
@@ -174,7 +174,7 @@ class TestFullFlow:
         h.cycle([fake_conn("9.9.9.1")])          # alerta + cooldown pornit
         h.cycle([fake_conn("8.8.8.1")])          # Google e deja cunoscut pentru chrome: nu apare nimic nou
         h.hostnames["7.7.7.1"] = "x.other-site.org"
-        h.cycle([fake_conn("7.7.7.1")])          # noua, dar în cooldown
+        h.cycle([fake_conn("7.7.7.1")])          # noua, dar in cooldown
         assert len(h.alerts("normal")) == 1
         keys = {p["group_key"] for p in ds.list_by_status(conn, ds.PENDING)}
         assert keys == {"evil-example.net", "other-site.org"}
@@ -213,14 +213,14 @@ class TestFullFlow:
         ds.record_pending(conn, "chrome", "evil-example.net", "domeniu", "t0")
         ds.set_status(conn, "chrome", "evil-example.net", ds.SUSPICIOUS)
         for _ in range(10):
-            h.cycle([fake_conn("9.9.9.1")])  # aceeași conexiune, vazuta la fiecare secunda
+            h.cycle([fake_conn("9.9.9.1")])  # aceeasi conexiune, vazuta la fiecare secunda
         assert len(h.alerts("critical")) == 1
 
     def test_decision_made_in_dashboard_applies_without_restart(self, conn):
         h = Harness(conn, HOSTS)
         h.seed_known("chrome", "google.com")
         h.cycle([fake_conn("9.9.9.1")])                      # devine pending
-        ds.set_status(conn, "chrome", "evil-example.net", ds.SUSPICIOUS)  # click în dashboard
+        ds.set_status(conn, "chrome", "evil-example.net", ds.SUSPICIOUS)  # click in dashboard
         h.cycle([fake_conn("9.9.9.2", local_port=50001)])    # urmatorul ciclu
         assert len(h.alerts("critical")) == 1
 
@@ -234,7 +234,7 @@ class TestFullFlow:
 class TestCompanyGrouping:
     def test_many_blocks_of_one_company_make_one_pending_item(self, conn):
         h = Harness(conn, {"34.78.67.1": "x.1e100.net", "172.217.114.5": "y.1e100.net"})
-        h.seed_known("chrome", "evil-example.net")  # chrome nu știe înca Google
+        h.seed_known("chrome", "evil-example.net")  # chrome nu stie inca Google
         h.cycle([fake_conn("34.78.67.1"), fake_conn("172.217.114.5", local_port=50001)])
         pending = ds.list_by_status(conn, ds.PENDING)
         assert [p["group_key"] for p in pending] == ["Google"]

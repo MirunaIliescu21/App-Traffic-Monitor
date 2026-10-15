@@ -6,11 +6,11 @@ Model NOU, diferit de v1:
 - NU mai cere aprobare (d/n) pentru fiecare conexiune - prea multe,
   Firefox singur genereaza zeci pe minut, e nepractic
 - Ruleaza CONTINUU pe fundal, colectand tot traficul (ca collector.py)
-- Notifica INFORMATIV, o singura data, cand vede o combinație
+- Notifica INFORMATIV, o singura data, cand vede o combinatie
   (proces, IP) noua - fara sa blocheze, fara sa ceara raspuns
 - La fiecare ANALYSIS_INTERVAL_SECONDS, ruleaza analiza de risc
-  (concentrare + beaconing + reputație, din baseline.py) pe datele
-  proaspat colectate și trimite o alerta ACTIVa doar daca gasește
+  (concentrare + beaconing + reputatie, din baseline.py) pe datele
+  proaspat colectate si trimite o alerta ACTIVa doar daca gaseste
   ceva cu adevarat suspect (scor >= 50)
 
 Rulare: sudo python3 watcher.py
@@ -40,25 +40,25 @@ from baseline_v5 import (
 DB_PATH = "traffic_monitor.db"
 ALERTS_LOG_PATH = "alerts.log"
 POLL_INTERVAL_SECONDS = 1          # cat de des verificam conexiunile active
-                                     # (la 1s prindem și conexiuni scurte, gen curl -m 2;
+                                     # (la 1s prindem si conexiuni scurte, gen curl -m 2;
                                      # la 3s+ le rataseram, exact problema descoperita la collector.py)
 ANALYSIS_INTERVAL_SECONDS = 120    # cat de des rulam analiza de risc completa (2 minute)
 RISK_ALERT_THRESHOLD = 50          # scor de la care trimitem alerta activa (nu doar informativa)
-RETENTION_INTERVAL_SECONDS = 6 * 3600  # cat de des curațam datele vechi (vezi retention.py)
-WHITELIST_COOLDOWN_SECONDS = 300   # cat timp minim între doua alerte de "comportament nou", per proces
+RETENTION_INTERVAL_SECONDS = 6 * 3600  # cat de des curatam datele vechi (vezi retention.py)
+WHITELIST_COOLDOWN_SECONDS = 300   # cat timp minim intre doua alerte de "comportament nou", per proces
 
 
 # ---------- Notificari desktop, corect configurate pentru sudo ----------
 
 def log_alert_to_file(message: str) -> None:
     """
-    Scrie orice alerta (inbound sau risc ridicat) într-un fișier text
+    Scrie orice alerta (inbound sau risc ridicat) intr-un fisier text
     permanent, INDIFERENT ce face desktop-ul cu popup-ul.
 
     De ce: notificarile "critical" din GNOME raman pe ecran pana le
-    închizi manual, dar unele versiuni nu le arhiveaza în istoricul de
-    notificari dupa închidere - poți pierde complet urma alertei.
-    Fișierul asta e o evidența permanenta, utila și ca jurnal de audit.
+    inchizi manual, dar unele versiuni nu le arhiveaza in istoricul de
+    notificari dupa inchidere - poti pierde complet urma alertei.
+    Fisierul asta e o evidenta permanenta, utila si ca jurnal de audit.
     """
     timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
     with open(ALERTS_LOG_PATH, "a", encoding="utf-8") as f:
@@ -67,10 +67,10 @@ def log_alert_to_file(message: str) -> None:
 
 def get_desktop_user_env() -> dict:
     """
-    Cand scriptul ruleaza cu sudo, procesul e root și NU are acces la
+    Cand scriptul ruleaza cu sudo, procesul e root si NU are acces la
     sesiunea grafica a utilizatorului (DBUS_SESSION_BUS_ADDRESS, DISPLAY).
     Reconstruim aceste variabile pentru utilizatorul original (cel care
-    a dat sudo), ca notify-send sa știe catre ce desktop sa trimita popup-ul.
+    a dat sudo), ca notify-send sa stie catre ce desktop sa trimita popup-ul.
     """
     sudo_user = os.environ.get("SUDO_USER")
     if not sudo_user:
@@ -106,7 +106,7 @@ def send_desktop_notification(title: str, message: str, urgency: str = "normal")
                 env=env, timeout=3, check=False,
             )
     except (FileNotFoundError, subprocess.SubprocessError):
-        pass  # nu blocam scriptul daca notificarea eșueaza
+        pass  # nu blocam scriptul daca notificarea esueaza
 
 
 # ---------- Colectare (identica ca logica cu collector.py) ----------
@@ -157,7 +157,7 @@ def init_db(conn: sqlite3.Connection) -> None:
             remote_port INTEGER
         )
     """)
-    # Starea alertelor de risc, persistata între reporniri — Fix Direcția A
+    # Starea alertelor de risc, persistata intre reporniri — Fix Directia A
     conn.execute("""
         CREATE TABLE IF NOT EXISTS risk_alert_state (
             process_name TEXT PRIMARY KEY,
@@ -165,7 +165,7 @@ def init_db(conn: sqlite3.Connection) -> None:
             updated_at TEXT NOT NULL
         )
     """)
-    # NOU: destinații cunoscute per proces (domeniu sau subnet), pentru
+    # NOU: destinatii cunoscute per proces (domeniu sau subnet), pentru
     # regula de "comportament nou" - vezi get_group_key()
     conn.execute("""
         CREATE TABLE IF NOT EXISTS known_destinations (
@@ -178,7 +178,7 @@ def init_db(conn: sqlite3.Connection) -> None:
             PRIMARY KEY (process_name, group_key)
         )
     """)
-    # NOU: cooldown persistat între reporniri - ultima data cand am trimis
+    # NOU: cooldown persistat intre reporniri - ultima data cand am trimis
     # o alerta de "comportament nou" pentru fiecare proces
     conn.execute("""
         CREATE TABLE IF NOT EXISTS whitelist_alert_state (
@@ -187,23 +187,23 @@ def init_db(conn: sqlite3.Connection) -> None:
         )
     """)
     conn.commit()
-    # NOU: starea destinațiilor noi (de verificat / normal / suspect) + istoric decizii
+    # NOU: starea destinatiilor noi (de verificat / normal / suspect) + istoric decizii
     ds.init_tables(conn)
 
 
 # ---------- Persistare risk_alert_state ----------
 
 def load_risk_alert_state(conn: sqlite3.Connection) -> dict:
-    """Încarca din SQLite starea alertelor de la rularea anterioara."""
+    """Incarca din SQLite starea alertelor de la rularea anterioara."""
     cur = conn.execute("SELECT process_name, last_alerted_count FROM risk_alert_state")
     state = {row[0]: row[1] for row in cur.fetchall()}
     if state:
-        print(f"[*] Am încarcat starea alertelor pentru {len(state)} procese din rularea anterioara")
+        print(f"[*] Am incarcat starea alertelor pentru {len(state)} procese din rularea anterioara")
     return state
 
 
 def save_risk_alert_state(conn: sqlite3.Connection, process_name: str, count: int) -> None:
-    """Salveaza în SQLite numarul de conexiuni la momentul ultimei alerte."""
+    """Salveaza in SQLite numarul de conexiuni la momentul ultimei alerte."""
     conn.execute("""
         INSERT INTO risk_alert_state (process_name, last_alerted_count, updated_at)
         VALUES (?, ?, ?)
@@ -218,13 +218,13 @@ def save_risk_alert_state(conn: sqlite3.Connection, process_name: str, count: in
 
 def load_known_destinations(conn: sqlite3.Connection) -> tuple[set, set]:
     """
-    Încarca, din rularile anterioare, ce (proces, cheie) sunt deja
-    cunoscute, plus setul de procese care au cel puțin o destinație
+    Incarca, din rularile anterioare, ce (proces, cheie) sunt deja
+    cunoscute, plus setul de procese care au cel putin o destinatie
     cunoscuta (folosit ca sa nu alertam la prima conexiune a unui proces
-    complet nou - nu avem înca niciun "normal" de comparat).
+    complet nou - nu avem inca niciun "normal" de comparat).
     """
-    # Cheile se țin la nivel de "entitate": 29 de blocuri Google cunoscute
-    # pentru chrome înseamna "chrome știe Google" - un bloc Google nou nu mai
+    # Cheile se tin la nivel de "entitate": 29 de blocuri Google cunoscute
+    # pentru chrome inseamna "chrome stie Google" - un bloc Google nou nu mai
     # e "comportament nou". Tabela known_destinations ramane la nivel fin.
     cur = conn.execute("SELECT process_name, group_key, group_type FROM known_destinations")
     rows = cur.fetchall()
@@ -235,7 +235,7 @@ def load_known_destinations(conn: sqlite3.Connection) -> tuple[set, set]:
 
 def upsert_known_destination(conn: sqlite3.Connection, process_name: str, group_key: str,
                               group_type: str, timestamp: str) -> None:
-    """Înregistreaza/actualizeaza o destinație cunoscuta - apelata la fiecare conexiune noua (pereche)."""
+    """Inregistreaza/actualizeaza o destinatie cunoscuta - apelata la fiecare conexiune noua (pereche)."""
     conn.execute("""
         INSERT INTO known_destinations (process_name, group_key, group_type, first_seen, last_seen, times_seen)
         VALUES (?, ?, ?, ?, ?, 1)
@@ -248,10 +248,10 @@ def upsert_known_destination(conn: sqlite3.Connection, process_name: str, group_
 
 def backfill_known_destinations_if_empty(conn: sqlite3.Connection, hostname_cache: dict) -> None:
     """
-    La prima rulare dupa integrare, known_destinations e goala, deși
+    La prima rulare dupa integrare, known_destinations e goala, desi
     `connections` poate avea luni de istoric deja. Fara backfill, orice
     proces ar parea "nou" o vreme, fara alerte utile. Populam o data din
-    tot istoricul existent - exact logica validata în experiment.
+    tot istoricul existent - exact logica validata in experiment.
     """
     existing = conn.execute("SELECT COUNT(*) FROM known_destinations").fetchone()[0]
     if existing > 0:
@@ -284,11 +284,11 @@ def backfill_known_destinations_if_empty(conn: sqlite3.Connection, hostname_cach
             ON CONFLICT (process_name, group_key) DO NOTHING
         """, (process_name, group_key, e["type"], e["first"], e["last"], e["count"]))
     conn.commit()
-    print(f"[*] Backfill terminat: {len(agg)} perechi (proces, destinație) cunoscute\n")
+    print(f"[*] Backfill terminat: {len(agg)} perechi (proces, destinatie) cunoscute\n")
 
 
 def load_whitelist_alert_state(conn: sqlite3.Connection) -> dict:
-    """Încarca, per proces, ultima data (datetime) cand s-a trimis o alerta de 'comportament nou'."""
+    """Incarca, per proces, ultima data (datetime) cand s-a trimis o alerta de 'comportament nou'."""
     cur = conn.execute("SELECT process_name, last_alerted_at FROM whitelist_alert_state")
     return {row[0]: datetime.fromisoformat(row[1]) for row in cur.fetchall()}
 
@@ -329,15 +329,15 @@ def get_process_info(pid: int, cache: dict) -> tuple[str, str, str]:
 
 def resolve_hostname(ip: str, cache: dict) -> str:
     """
-    DNS invers: încearca sa afle numele de domeniu asociat unui IP
+    DNS invers: incearca sa afle numele de domeniu asociat unui IP
     (ex. "185.125.190.36" -> "azure.microsoft.com"). Util ca sa
-    recunoști imediat "a, asta e Digi Storage", nu doar un IP anonim.
+    recunosti imediat "a, asta e Digi Storage", nu doar un IP anonim.
 
-    Nu toate IP-urile au un nume invers înregistrat - în acel caz,
-    întoarcem IP-ul neschimbat, fara eroare.
+    Nu toate IP-urile au un nume invers inregistrat - in acel caz,
+    intoarcem IP-ul neschimbat, fara eroare.
 
-    Cache în memorie, ca sa nu facem o cerere DNS noua la fiecare
-    conexiune catre același IP (ar fi lent și inutil).
+    Cache in memorie, ca sa nu facem o cerere DNS noua la fiecare
+    conexiune catre acelasi IP (ar fi lent si inutil).
     """
     if ip in cache:
         return cache[ip]
@@ -355,8 +355,8 @@ def extract_base_domain(hostname: str) -> str:
     Ex: lb-140-82-112-21-iad.github.com -> github.com
 
     Euristica simpla: pastram ultimele 2 segmente separate prin punct.
-    LIMITARE cunoscuta: greșește pe domenii cu TLD compus din 2 parți
-    (ex. "ceva.co.uk") - nu apare în datele noastre curente.
+    LIMITARE cunoscuta: greseste pe domenii cu TLD compus din 2 parti
+    (ex. "ceva.co.uk") - nu apare in datele noastre curente.
     """
     parts = hostname.rstrip(".").split(".")
     if len(parts) < 2:
@@ -366,29 +366,29 @@ def extract_base_domain(hostname: str) -> str:
 
 def get_group_key(ip: str, hostname_cache: dict) -> tuple[str, str]:
     """
-    Calculeaza "cheia de grupare" a unei destinații, folosita de regula de
-    "comportament nou" (vezi collect_and_notify). Trei metode, în ordine:
+    Calculeaza "cheia de grupare" a unei destinatii, folosita de regula de
+    "comportament nou" (vezi collect_and_notify). Trei metode, in ordine:
 
     1. Domeniu (din reverse DNS, via resolve_hostname - refolosim cache-ul
-       deja existent, nicio cerere DNS în plus fața de ce se face oricum)
+       deja existent, nicio cerere DNS in plus fata de ce se face oricum)
     2. Subnet (/24 IPv4, /48 IPv6), daca nu exista reverse DNS - IP-uri
-       vecine sunt adesea aceeași infrastructura (același furnizor cloud)
-    3. IP-ul însuși, ca fallback ultim, daca nici subnet-ul nu poate fi calculat
+       vecine sunt adesea aceeasi infrastructura (acelasi furnizor cloud)
+    3. IP-ul insusi, ca fallback ultim, daca nici subnet-ul nu poate fi calculat
 
-    Întoarce (cheie, tip) - tipul ajuta la depanare/jurnal, ca sa vezi prin
+    Intoarce (cheie, tip) - tipul ajuta la depanare/jurnal, ca sa vezi prin
     ce metoda s-a facut gruparea.
     """
     hostname = resolve_hostname(ip, hostname_cache)
 
     if hostname != ip:
-        # resolve_hostname a gasit un nume real (nu a cazut pe fallback-ul "IP-ul însuși")
+        # resolve_hostname a gasit un nume real (nu a cazut pe fallback-ul "IP-ul insusi")
         return extract_base_domain(hostname), "domeniu"
 
     try:
         addr = ipaddress.ip_address(ip)
 
-        # IPv4 mascat ca IPv6 (ex. ::ffff:34.78.67.165) - aceeași capcana
-        # documentata deja la is_effectively_loopback() din acest fișier.
+        # IPv4 mascat ca IPv6 (ex. ::ffff:34.78.67.165) - aceeasi capcana
+        # documentata deja la is_effectively_loopback() din acest fisier.
         if addr.version == 6 and addr.ipv4_mapped is not None:
             addr = addr.ipv4_mapped
 
@@ -396,15 +396,15 @@ def get_group_key(ip: str, hostname_cache: dict) -> tuple[str, str]:
         network = ipaddress.ip_network(f"{addr}/{prefix}", strict=False)
         return str(network), "subnet"
     except ValueError:
-        return ip, "ip"  # fallback ultim, practic nu se întampla
+        return ip, "ip"  # fallback ultim, practic nu se intampla
 
 
 def is_effectively_loopback(ip: str) -> bool:
     """
     Verifica daca un IP e loopback (127.x.x.x, ::1), INCLUSIV varianta
-    IPv6 "împachetata" (::ffff:127.0.0.1) - un format special, frecvent
-    la conexiuni locale pe sisteme cu IPv6 activ, pe care Python NU îl
-    recunoaște automat ca loopback din is_loopback simplu.
+    IPv6 "impachetata" (::ffff:127.0.0.1) - un format special, frecvent
+    la conexiuni locale pe sisteme cu IPv6 activ, pe care Python NU il
+    recunoaste automat ca loopback din is_loopback simplu.
     """
     try:
         addr = ipaddress.ip_address(ip.split("%")[0])
@@ -426,13 +426,13 @@ def collect_and_notify(conn: sqlite3.Connection, process_cache: dict, notified_p
                         previous_open: set | None = None) -> int:
     """
     O trecere de colectare: salveaza toate conexiunile active (ca collector.py),
-    trimite notificare informativa pentru conexiuni IEȘITE noi, și ALERTa
+    trimite notificare informativa pentru conexiuni IESITE noi, si ALERTa
     IMEDIATa pentru conexiuni PRIMITE (cineva se conecteaza la tine).
 
-    Distincția ieșit/primit: mai întai identificam porturile locale aflate
-    în stare LISTEN (adica "ascultam" pe ele, suntem server). O conexiune
-    ESTABLISHED al carei port local se potrivește cu un port LISTEN e o
-    conexiune PRIMITa - cineva din exterior a inițiat-o, nu tu.
+    Distinctia iesit/primit: mai intai identificam porturile locale aflate
+    in stare LISTEN (adica "ascultam" pe ele, suntem server). O conexiune
+    ESTABLISHED al carei port local se potriveste cu un port LISTEN e o
+    conexiune PRIMITa - cineva din exterior a initiat-o, nu tu.
     """
     timestamp = datetime.now(timezone.utc).isoformat()
     all_conns = list(psutil.net_connections(kind="inet"))
@@ -441,8 +441,8 @@ def collect_and_notify(conn: sqlite3.Connection, process_cache: dict, notified_p
         decisions = {}
     if notified_suspicious is None:
         notified_suspicious = set()
-    # reîncarcam deciziile din DB la fiecare ciclu: ce a apasat utilizatorul
-    # în dashboard ("E normal" / "Nu recunosc") se aplica în ~1 secunda
+    # reincarcam deciziile din DB la fiecare ciclu: ce a apasat utilizatorul
+    # in dashboard ("E normal" / "Nu recunosc") se aplica in ~1 secunda
     decisions.clear()
     decisions.update(ds.load_decisions(conn))
     if len(notified_suspicious) > 5000:
@@ -469,10 +469,10 @@ def collect_and_notify(conn: sqlite3.Connection, process_cache: dict, notified_p
         name, exe_path, binary_hash = get_process_info(pid, process_cache)
         protocol = "TCP" if conn_info.type == 1 else "UDP"
 
-        # Scriem în baza DOAR conexiunile noi (care nu erau deschise la citirea
+        # Scriem in baza DOAR conexiunile noi (care nu erau deschise la citirea
         # precedenta), nu fiecare conexiune deschisa la fiecare secunda: o
-        # conexiune de 10 minute ar însemna 600 de randuri (~275 MB/zi masurat).
-        # O conexiune = (proces, adresa+portul tau, adresa+portul destinației).
+        # conexiune de 10 minute ar insemna 600 de randuri (~275 MB/zi masurat).
+        # O conexiune = (proces, adresa+portul tau, adresa+portul destinatiei).
         # Beaconing-ul nu pierde nimic: un curl la 60s deschide de fiecare data
         # o conexiune noua, cu alt port local. previous_open=None (teste) scrie tot.
         conn_id = (
@@ -496,15 +496,15 @@ def collect_and_notify(conn: sqlite3.Connection, process_cache: dict, notified_p
 
         if is_inbound:
             # NOU: conexiune PRIMITa - cineva s-a conectat la tine.
-            # NU filtram IP-uri private aici (spre deosebire de traficul ieșit) -
-            # un atacator pe aceeași rețea locala (ex. Kali în VirtualBox) are
+            # NU filtram IP-uri private aici (spre deosebire de traficul iesit) -
+            # un atacator pe aceeasi retea locala (ex. Kali in VirtualBox) are
             # tot un IP privat, dar tot vrem sa te alerteze despre el.
             #
             # cheia include remote_port: fiecare CONEXIUNE NOUa (chiar de la
-            # același IP, catre același port local) are un remote_port diferit,
+            # acelasi IP, catre acelasi port local) are un remote_port diferit,
             # alocat aleator de sistemul de operare al atacatorului la fiecare
-            # reconectare - fara remote_port în cheie, a doua reconectare de la
-            # Kali nu mai declanșa alerta, deși era o încercare noua, reala.
+            # reconectare - fara remote_port in cheie, a doua reconectare de la
+            # Kali nu mai declansa alerta, desi era o incercare noua, reala.
             inbound_key = (name, remote_ip, local_port, remote_port)
             if inbound_key in notified_inbound:
                 continue
@@ -523,24 +523,24 @@ def collect_and_notify(conn: sqlite3.Connection, process_cache: dict, notified_p
                 urgency="critical",
             )
             print(f"[INBOUND!] {remote_ip}:{remote_port} -> {name} (port local {local_port})")
-            continue  # nu mai trecem și prin logica de "ieșit" pentru aceeași conexiune
+            continue  # nu mai trecem si prin logica de "iesit" pentru aceeasi conexiune
 
-        # de aici: conexiuni IEȘITE catre IP-uri publice
+        # de aici: conexiuni IESITE catre IP-uri publice
         if is_private_ip(remote_ip):
             continue
 
         group_key, group_type = get_group_key(remote_ip, hostname_cache)
-        # decidem și ținem minte la nivel de companie (Google, Microsoft...) cand
-        # o știm; altfel la nivel de destinație exacta
+        # decidem si tinem minte la nivel de companie (Google, Microsoft...) cand
+        # o stim; altfel la nivel de destinatie exacta
         entity_key, entity_type = companies.entity_for(group_key, group_type)
         dest_key = (name, entity_key)
         status = decisions.get(dest_key)
 
-        # --- destinație marcata "Nu recunosc": ORICE conexiune noua alerteaza ---
-        # Verificarea e înaintea lui `notified_pairs` și ignora cooldown-ul:
-        # o destinație pe care utilizatorul a declarat-o suspecta trebuie sa
-        # alerteze și cand revine pe un IP deja vazut. Ca sa nu alerteze la
-        # fiecare secunda pentru ACEEAȘI conexiune înca deschisa, deduplicam
+        # --- destinatie marcata "Nu recunosc": ORICE conexiune noua alerteaza ---
+        # Verificarea e inaintea lui `notified_pairs` si ignora cooldown-ul:
+        # o destinatie pe care utilizatorul a declarat-o suspecta trebuie sa
+        # alerteze si cand revine pe un IP deja vazut. Ca sa nu alerteze la
+        # fiecare secunda pentru ACEEASI conexiune inca deschisa, deduplicam
         # pe (proces, IP, port remote, port local).
         if status == ds.SUSPICIOUS:
             conn_key = (name, remote_ip, remote_port, local_port)
@@ -551,14 +551,14 @@ def collect_and_notify(conn: sqlite3.Connection, process_cache: dict, notified_p
                     f"[NU-RECUNOSC] {name} contacteaza din nou {entity_key} ({remote_ip})"
                 )
                 send_desktop_notification(
-                    f"🔴 {name} contacteaza o destinație marcata „Nu recunosc”",
+                    f"🔴 {name} contacteaza o destinatie marcata „Nu recunosc”",
                     f"{entity_key} ({remote_ip})",
                     urgency="critical",
                 )
                 print(f"[NU-RECUNOSC!] {name} -> {entity_key} ({remote_ip})")
             continue
 
-        # notificare INFORMATIVa pentru conexiuni IEȘITE noi (logica veche)
+        # notificare INFORMATIVa pentru conexiuni IESITE noi (logica veche)
         pair = (name, remote_ip)
         if pair in notified_pairs:
             continue
@@ -578,7 +578,7 @@ def collect_and_notify(conn: sqlite3.Connection, process_cache: dict, notified_p
             )
         print(f"[info] Conexiune noua: {name} -> {display_dest} ({remote_ip})")
 
-        # regula de "comportament nou" - proces deja cunoscut, destinație
+        # regula de "comportament nou" - proces deja cunoscut, destinatie
         # (domeniu/subnet) niciodata vazuta pentru el.
         is_new_destination = name in known_processes and dest_key not in known_destination_keys
         now_dt = datetime.now(timezone.utc)
@@ -590,8 +590,8 @@ def collect_and_notify(conn: sqlite3.Connection, process_cache: dict, notified_p
         action = ds.decide_action(status, is_new_destination, cooldown_expired, False)
 
         if action in (ds.ACTION_ALERT_NEW, ds.ACTION_PENDING_SILENT):
-            # în ambele cazuri destinația intra în lista "de verificat" - chiar
-            # daca cooldown-ul a oprit notificarea, utilizatorul o vede în dashboard
+            # in ambele cazuri destinatia intra in lista "de verificat" - chiar
+            # daca cooldown-ul a oprit notificarea, utilizatorul o vede in dashboard
             ds.record_pending(
                 conn, name, entity_key, entity_type, timestamp,
                 sample_ip=remote_ip,
@@ -602,11 +602,11 @@ def collect_and_notify(conn: sqlite3.Connection, process_cache: dict, notified_p
         if action == ds.ACTION_ALERT_NEW:
             title, _ = companies.display(entity_key, entity_type)
             log_alert_to_file(
-                f"[COMPORTAMENT NOU] {name} -> destinație noua: {entity_key} "
+                f"[COMPORTAMENT NOU] {name} -> destinatie noua: {entity_key} "
                 f"({entity_type}; {group_key})"
             )
             send_desktop_notification(
-                f"🟡 {name}: destinație noua",
+                f"🟡 {name}: destinatie noua",
                 f"Contacteaza pentru prima data {title}. Deschide dashboard-ul ca sa decizi.",
                 urgency="normal",
             )
@@ -616,7 +616,7 @@ def collect_and_notify(conn: sqlite3.Connection, process_cache: dict, notified_p
         elif action == ds.ACTION_PENDING_SILENT:
             print(f"[NOU-COMPORTAMENT, fara notificare - cooldown] {name} -> {entity_key} ({entity_type}; {group_key})")
 
-        known_destination_keys.add(dest_key)  # nivel entitate, ca în load_known_destinations
+        known_destination_keys.add(dest_key)  # nivel entitate, ca in load_known_destinations
         known_processes.add(name)
         upsert_known_destination(conn, name, group_key, group_type, timestamp)
 
@@ -640,17 +640,17 @@ def collect_and_notify(conn: sqlite3.Connection, process_cache: dict, notified_p
 
 def run_risk_analysis(conn: sqlite3.Connection, risk_alert_state: dict) -> None:
     """
-    Ruleaza exact aceeași logica din baseline.py (concentrare, beaconing,
-    reputație) pe datele acumulate pana acum, și trimite o alerta ACTIVa
+    Ruleaza exact aceeasi logica din baseline.py (concentrare, beaconing,
+    reputatie) pe datele acumulate pana acum, si trimite o alerta ACTIVa
     (urgency=critical) doar pentru procesele cu scor >= RISK_ALERT_THRESHOLD.
 
-    NOU: risc_alert_state ține minte, per proces, cate conexiuni (totale)
-    avea la ULTIMA alerta trimisa. Daca numarul nu s-a schimbat fața de
+    NOU: risc_alert_state tine minte, per proces, cate conexiuni (totale)
+    avea la ULTIMA alerta trimisa. Daca numarul nu s-a schimbat fata de
     ultima data (adica nu a aparut trafic nou), NU retrimitem popup -
-    altfel un proces suspect declanșa aceeași alerta la infinit, la
-    fiecare 2 minute, chiar daca nu se întampla nimic nou (bug descoperit
-    empiric: curl-ul de test oprit înca aparea "detectat" identic, de 3
-    ori la rand, doar pentru ca analiza re-evalua aceleași date vechi).
+    altfel un proces suspect declansa aceeasi alerta la infinit, la
+    fiecare 2 minute, chiar daca nu se intampla nimic nou (bug descoperit
+    empiric: curl-ul de test oprit inca aparea "detectat" identic, de 3
+    ori la rand, doar pentru ca analiza re-evalua aceleasi date vechi).
     """
     cutoff = (datetime.now(timezone.utc) - timedelta(hours=24)).isoformat()
     cur = conn.execute("""
@@ -681,13 +681,13 @@ def run_risk_analysis(conn: sqlite3.Connection, risk_alert_state: dict) -> None:
         current_count = report["total_connections"]
         last_alerted_count = risk_alert_state.get(process_name)
 
-        # afișam TOATE motivele, nu doar primele 2
+        # afisam TOATE motivele, nu doar primele 2
         reasons_text = "\n      ".join(report["reasons"])
         key_reasons = [r for r in report["reasons"] if "CONCENTRAT" in r or "BEACONING" in r or "Reputa" in r]
         summary = "; ".join(key_reasons) if key_reasons else reasons_text
 
         if last_alerted_count == current_count:
-            # nimic nou fața de ultima alerta - doar nota discreta în consola, fara popup
+            # nimic nou fata de ultima alerta - doar nota discreta in consola, fara popup
             print(f"[risc neschimbat] {process_name}: tot la {report['risk_score']}/100, fara activitate noua (nu retrimit popup)")
             continue
 
@@ -715,10 +715,10 @@ def main():
     conn = sqlite3.connect(DB_PATH, timeout=10)
     init_db(conn)
 
-    # încarcam ce combinații am notificat deja (din rulari anterioare)
+    # incarcam ce combinatii am notificat deja (din rulari anterioare)
     cur = conn.execute("SELECT process_name, remote_ip FROM notified_pairs")
     notified_pairs = {(row[0], row[1]) for row in cur.fetchall()}
-    print(f"[*] {len(notified_pairs)} combinații (proces, IP) deja notificate anterior\n")
+    print(f"[*] {len(notified_pairs)} combinatii (proces, IP) deja notificate anterior\n")
 
     process_cache: dict = {}
     hostname_cache: dict = {}
@@ -726,26 +726,26 @@ def main():
     risk_alert_state: dict = load_risk_alert_state(conn)
 
     # NOU: backfill din istoric (o singura data, daca tabela e goala), apoi
-    # încarcam ce e deja cunoscut + cooldown-ul de la rularea anterioara
+    # incarcam ce e deja cunoscut + cooldown-ul de la rularea anterioara
     backfill_known_destinations_if_empty(conn, hostname_cache)
     known_destination_keys, known_processes = load_known_destinations(conn)
     last_whitelist_alert: dict = load_whitelist_alert_state(conn)
     migrated = ds.migrate_to_entities(conn, companies.entity_for)
     if migrated:
-        print(f"[*] Am grupat {migrated} destinații din lista 'de verificat' pe companii\n")
+        print(f"[*] Am grupat {migrated} destinatii din lista 'de verificat' pe companii\n")
     decisions: dict = ds.load_decisions(conn)
     notified_suspicious: set = set()
     previous_open: set = set()
-    print(f"[*] {len(known_destination_keys)} destinații cunoscute pentru {len(known_processes)} procese\n")
+    print(f"[*] {len(known_destination_keys)} destinatii cunoscute pentru {len(known_processes)} procese\n")
 
-    # curațare date vechi: la pornire, apoi la fiecare RETENTION_INTERVAL_SECONDS
+    # curatare date vechi: la pornire, apoi la fiecare RETENTION_INTERVAL_SECONDS
     def run_retention():
         try:
             deleted = retention.purge_old_data(conn)
             if any(deleted.values()):
-                print("[retenție] șterse: " + ", ".join(f"{t}={n}" for t, n in deleted.items()))
+                print("[retentie] sterse: " + ", ".join(f"{t}={n}" for t, n in deleted.items()))
         except sqlite3.Error as e:
-            print(f"[retenție] sarit (baza ocupata sau eroare): {e}")  # nu oprim monitorizarea
+            print(f"[retentie] sarit (baza ocupata sau eroare): {e}")  # nu oprim monitorizarea
 
     retention.ensure_indexes(conn)
     run_retention()

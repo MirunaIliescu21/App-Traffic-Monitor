@@ -1,5 +1,5 @@
 """
-Teste pentru dashboard: endpoint-ul de decizii și protecțiile lui.
+Teste pentru dashboard: endpoint-ul de decizii si protectiile lui.
 
 Rulare: python3 -m pytest test_dashboard.py -v
 """
@@ -122,7 +122,7 @@ class TestStatusApi:
 
 class TestPageEscaping:
     def test_no_untrusted_field_is_interpolated_raw(self):
-        """Orice câmp care vine din rețea/proces trebuie sa treaca prin esc() în HTML."""
+        """Orice camp care vine din retea/proces trebuie sa treaca prin esc() in HTML."""
         html = dashboard.DASHBOARD_HTML
         for field in ("process_name", "remote_ip", "remote_hostname", "group_key",
                       "sample_hostname", "sample_ip", "raw"):

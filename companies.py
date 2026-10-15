@@ -7,7 +7,7 @@ Un utilizator non-tehnic nu poate descifra "13.69.68.0/24", dar intelege
 cum le calculeaza watcher_v6.get_group_key) in numele companiei care o
 detine, plus o descriere intr-o fraza.
 
-DOUa SURSE DE CUNOȘTINtE, ambele liste scrise de mana:
+DOUa SURSE DE CUNOSTINtE, ambele liste scrise de mana:
   1. DOMENII  - sigure: daca reverse DNS spune "xx.1e100.net", e Google.
   2. PREFIXE  - intervale de IP-uri publice cunoscute ale marilor furnizori.
                Acopera adresele FaRa reverse DNS (peste jumatate din ele).
@@ -24,24 +24,24 @@ LIMITaRI (cunoscute, asumate):
 
 import ipaddress
 
-# nume afișat -> descriere (o fraza, pentru utilizator)
+# nume afisat -> descriere (o fraza, pentru utilizator)
 COMPANIES = {
     "Google": "servicii Google (cautare, YouTube, Chrome, Google Cloud)",
     "Microsoft": "servicii Microsoft (Azure, Windows, Office, VS Code)",
-    "Amazon": "Amazon Web Services și CloudFront, care gazduiesc multe site-uri și aplicatii",
-    "Cloudflare": "retea care accelereaza și protejeaza multe site-uri",
+    "Amazon": "Amazon Web Services si CloudFront, care gazduiesc multe site-uri si aplicatii",
+    "Cloudflare": "retea care accelereaza si protejeaza multe site-uri",
     "Meta": "Facebook, Instagram, WhatsApp",
-    "Akamai": "retea de livrare de continut, folosita de multe site-uri și aplicatii",
-    "Fastly": "retea de livrare de continut, folosita de multe site-uri și aplicatii",
-    "Edgecast": "retea de livrare de continut (folosita și de example.com)",
+    "Akamai": "retea de livrare de continut, folosita de multe site-uri si aplicatii",
+    "Fastly": "retea de livrare de continut, folosita de multe site-uri si aplicatii",
+    "Edgecast": "retea de livrare de continut (folosita si de example.com)",
     "Netflix": "Netflix",
     "GitHub": "GitHub (apartine Microsoft)",
     "Spotify": "Spotify",
-    "JetBrains": "JetBrains (PyCharm, IntelliJ și celelalte programe JetBrains)",
+    "JetBrains": "JetBrains (PyCharm, IntelliJ si celelalte programe JetBrains)",
     "Mozilla": "Mozilla (Firefox)",
     "Canonical": "Canonical (Ubuntu)",
-    "Digi": "Digi (RCS & RDS), furnizor de internet și servicii din Romania",
-    "Universitatea Politehnica București": "reteaua universitatii (pub.ro)",
+    "Digi": "Digi (RCS & RDS), furnizor de internet si servicii din Romania",
+    "Universitatea Politehnica Bucuresti": "reteaua universitatii (pub.ro)",
 }
 
 # domeniu de baza (cum il intoarce extract_base_domain) -> companie
@@ -82,7 +82,7 @@ DOMAIN_COMPANIES = {
     "mozilla.com": "Mozilla", "mozilla.org": "Mozilla", "mozilla.net": "Mozilla",
     "ubuntu.com": "Canonical", "canonical.com": "Canonical",
     "rcs-rds.ro": "Digi", "digi.ro": "Digi",
-    "pub.ro": "Universitatea Politehnica București",
+    "pub.ro": "Universitatea Politehnica Bucuresti",
 }
 
 # companie -> intervale de IP-uri (CIDR). "vp" = verificat partial (vezi docstring)
@@ -120,7 +120,7 @@ _PREFIXES_BY_COMPANY = {
     ],
     "Edgecast": ["93.184.208.0/20"],
     "Digi": ["2a02:2f00::/28"],                 # vp
-    "Universitatea Politehnica București": ["141.85.0.0/16"],
+    "Universitatea Politehnica Bucuresti": ["141.85.0.0/16"],
 }
 
 # lista plata (retea, companie), cea mai specifica (prefix cel mai lung) prima
@@ -133,7 +133,7 @@ PREFIX_COMPANIES = sorted(
 
 
 def company_for(group_key: str, group_type: str) -> str | None:
-    """Compania care detine destinatia, sau None daca nu o știm (nu ghicim)."""
+    """Compania care detine destinatia, sau None daca nu o stim (nu ghicim)."""
     if group_type == "domeniu":
         return DOMAIN_COMPANIES.get(group_key.lower())
     if group_type in ("subnet", "ip"):
@@ -149,7 +149,7 @@ def company_for(group_key: str, group_type: str) -> str | None:
 
 def entity_for(group_key: str, group_type: str) -> tuple[str, str]:
     """
-    Unitatea dupa care tinem minte și decidem: compania, daca o știm,
+    Unitatea dupa care tinem minte si decidem: compania, daca o stim,
     altfel destinatia exacta. intoarce (cheie, tip); tipul e "companie"
     pentru companii.
     """

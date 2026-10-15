@@ -1,25 +1,25 @@
 #!/usr/bin/env python3
 """
-Retenția datelor: șterge din baza de date ce e prea vechi, ca fișierul sa
-nu creasca la nesfârșit (în testele noastre: 3 MB -> 78 MB în câteva zile).
+Retentia datelor: sterge din baza de date ce e prea vechi, ca fisierul sa
+nu creasca la nesfarsit (in testele noastre: 3 MB -> 78 MB in cateva zile).
 
-Ce se pastreaza, cât timp, și de ce:
-  connections     14 zile  - istoricul brut, 1 rând/conexiune/secunda; analiza
-                             de risc folosește doar ultimele 24h, deci 14 zile
-                             sunt suficiente pentru investigat ce s-a întâmplat
-  inbound_events  90 zile  - rare și valoroase (cineva s-a conectat LA tine)
-  tot restul      pentru totdeauna - mici și sunt "memoria" aplicației:
+Ce se pastreaza, cat timp, si de ce:
+  connections     14 zile  - istoricul brut, 1 rand/conexiune/secunda; analiza
+                             de risc foloseste doar ultimele 24h, deci 14 zile
+                             sunt suficiente pentru investigat ce s-a intamplat
+  inbound_events  90 zile  - rare si valoroase (cineva s-a conectat LA tine)
+  tot restul      pentru totdeauna - mici si sunt "memoria" aplicatiei:
                   known_destinations (ce e normal pentru fiecare program),
                   destination_status + decision_log (deciziile tale),
                   notified_pairs, risk_alert_state, whitelist_alert_state
 
-IMPORTANT - ce NU face ștergerea: nu micșoreaza fișierul. SQLite reutilizeaza
-spațiul eliberat pentru date noi, deci baza nu mai crește, dar ramâne la
-dimensiunea atinsa. Ca sa recuperezi spațiul pe disc, oprești watcher-ul și
+IMPORTANT - ce NU face stergerea: nu micsoreaza fisierul. SQLite reutilizeaza
+spatiul eliberat pentru date noi, deci baza nu mai creste, dar ramane la
+dimensiunea atinsa. Ca sa recuperezi spatiul pe disc, opresti watcher-ul si
 rulezi o data: python3 retention.py --vacuum
 
-Rulare manuala (arata ce ar șterge, fara sa ștearga):  python3 retention.py --dry-run
-Rulare manuala (șterge):                                 python3 retention.py
+Rulare manuala (arata ce ar sterge, fara sa stearga):  python3 retention.py --dry-run
+Rulare manuala (sterge):                                 python3 retention.py
 """
 
 import sqlite3
@@ -34,11 +34,11 @@ RETENTION_RULES = {
     "inbound_events": (90, "timestamp"),
 }
 
-BATCH_SIZE = 50_000  # ștergem în loturi, ca sa nu blocam baza (watcher-ul scrie în ea)
+BATCH_SIZE = 50_000  # stergem in loturi, ca sa nu blocam baza (watcher-ul scrie in ea)
 
 
 def ensure_indexes(conn: sqlite3.Connection) -> None:
-    """Fara index pe data, fiecare ștergere ar parcurge tot tabelul."""
+    """Fara index pe data, fiecare stergere ar parcurge tot tabelul."""
     conn.execute("CREATE INDEX IF NOT EXISTS idx_conn_time ON connections (timestamp)")
     conn.commit()
 
@@ -52,8 +52,8 @@ def _table_exists(conn: sqlite3.Connection, table: str) -> bool:
 def purge_old_data(conn: sqlite3.Connection, now: datetime | None = None,
                    rules: dict | None = None, dry_run: bool = False) -> dict:
     """
-    Șterge rândurile mai vechi decât regula fiecarui tabel.
-    Întoarce {tabel: numar_rânduri_șterse} (sau, la dry_run, câte AR fi șterse).
+    Sterge randurile mai vechi decat regula fiecarui tabel.
+    Intoarce {tabel: numar_randuri_sterse} (sau, la dry_run, cate AR fi sterse).
     """
     now = now or datetime.now(timezone.utc)
     rules = rules or RETENTION_RULES
@@ -85,7 +85,7 @@ def purge_old_data(conn: sqlite3.Connection, now: datetime | None = None,
 
 
 def vacuum(conn: sqlite3.Connection) -> None:
-    """Recupereaza spațiul pe disc. Necesita watcher-ul și dashboard-ul OPRITE."""
+    """Recupereaza spatiul pe disc. Necesita watcher-ul si dashboard-ul OPRITE."""
     conn.execute("VACUUM")
 
 
@@ -95,12 +95,12 @@ def main() -> None:
     try:
         ensure_indexes(conn)
         result = purge_old_data(conn, dry_run=dry_run)
-        verb = "ar fi șterse" if dry_run else "șterse"
+        verb = "ar fi sterse" if dry_run else "sterse"
         for table, n in result.items():
             days = RETENTION_RULES[table][0]
-            print(f"  {table}: {n} rânduri {verb} (mai vechi de {days} zile)")
+            print(f"  {table}: {n} randuri {verb} (mai vechi de {days} zile)")
         if "--vacuum" in sys.argv and not dry_run:
-            print("[*] Recuperez spațiul pe disc (VACUUM)...")
+            print("[*] Recuperez spatiul pe disc (VACUUM)...")
             vacuum(conn)
             print("[*] Gata.")
     finally:

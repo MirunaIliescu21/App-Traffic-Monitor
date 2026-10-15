@@ -1,19 +1,19 @@
 #!/usr/bin/env python3
 """
-Starea destinațiilor: "de verificat" / "normal" / "suspect".
+Starea destinatiilor: "de verificat" / "normal" / "suspect".
 
-Modul comun, folosit atât de watcher_v6.py (scrie destinațiile noi, citește
-deciziile), cât și de dashboard.py (afișeaza + butoanele "E normal" /
+Modul comun, folosit atat de watcher_v6.py (scrie destinatiile noi, citeste
+deciziile), cat si de dashboard.py (afiseaza + butoanele "E normal" /
 "Nu recunosc"). Nu depinde de psutil sau Flask - doar sqlite3 - ca sa poata
 fi testat izolat.
 
 Trei stari (decizie de produs):
-  pending    - destinație noua pentru un proces cunoscut; utilizatorul nu a
-               decis înca. Ramâne în lista, NU mai alerteaza, NU devine
-               niciodata "normal" automat (liniștea nu înseamna aprobare).
+  pending    - destinatie noua pentru un proces cunoscut; utilizatorul nu a
+               decis inca. Ramane in lista, NU mai alerteaza, NU devine
+               niciodata "normal" automat (linistea nu inseamna aprobare).
   normal     - utilizatorul a confirmat "E normal". Nu mai alerteaza.
   suspicious - utilizatorul a spus "Nu recunosc". Orice conexiune noua catre
-               ea alerteaza, ignorând cooldown-ul.
+               ea alerteaza, ignorand cooldown-ul.
 """
 
 import sqlite3
@@ -24,7 +24,7 @@ NORMAL = "normal"
 SUSPICIOUS = "suspicious"
 VALID_STATUSES = (PENDING, NORMAL, SUSPICIOUS)
 
-# Acțiunile posibile pentru o conexiune ieșita catre o destinație
+# Actiunile posibile pentru o conexiune iesita catre o destinatie
 ACTION_IGNORE = "ignore"
 ACTION_ALERT_SUSPICIOUS = "alert_suspicious"
 ACTION_ALERT_NEW = "alert_new"
@@ -50,7 +50,7 @@ def init_tables(conn: sqlite3.Connection) -> None:
             PRIMARY KEY (process_name, group_key)
         )
     """)
-    # istoricul deciziilor - ca utilizatorul (și tu) sa vedeți ce s-a decis și când
+    # istoricul deciziilor - ca utilizatorul (si tu) sa vedeti ce s-a decis si cand
     conn.execute("""
         CREATE TABLE IF NOT EXISTS decision_log (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -67,13 +67,13 @@ def init_tables(conn: sqlite3.Connection) -> None:
 def decide_action(status: str | None, is_new_destination: bool,
                   cooldown_expired: bool, already_alerted_this_connection: bool) -> str:
     """
-    Logica de decizie, ca funcție pura (ușor de testat, fara rețea sau DB).
+    Logica de decizie, ca functie pura (usor de testat, fara retea sau DB).
 
-    status: starea cunoscuta a destinației (None daca nu are rând înca).
+    status: starea cunoscuta a destinatiei (None daca nu are rand inca).
     is_new_destination: procesul e cunoscut, dar nu a mai contactat grupul asta.
     cooldown_expired: a trecut destul timp de la ultima alerta "noua" a procesului.
     already_alerted_this_connection: pentru "suspect" - conexiunea asta
-        (aceeași, înca deschisa) a declanșat deja o alerta.
+        (aceeasi, inca deschisa) a declansat deja o alerta.
     """
     if status == SUSPICIOUS:
         return ACTION_IGNORE if already_alerted_this_connection else ACTION_ALERT_SUSPICIOUS
@@ -89,7 +89,7 @@ def decide_action(status: str | None, is_new_destination: bool,
 def record_pending(conn: sqlite3.Connection, process_name: str, group_key: str,
                    group_type: str, timestamp: str,
                    sample_ip: str | None = None, sample_hostname: str | None = None) -> bool:
-    """Adauga o destinație ca 'de verificat'. Întoarce True daca e într-adevar noua."""
+    """Adauga o destinatie ca 'de verificat'. Intoarce True daca e intr-adevar noua."""
     cur = conn.execute("""
         INSERT OR IGNORE INTO destination_status
             (process_name, group_key, group_type, status, first_seen, last_seen,
@@ -103,8 +103,8 @@ def record_pending(conn: sqlite3.Connection, process_name: str, group_key: str,
 def set_status(conn: sqlite3.Connection, process_name: str, group_key: str,
                new_status: str, timestamp: str | None = None) -> bool:
     """
-    Aplica decizia utilizatorului. Întoarce False daca destinația nu exista.
-    Ridica ValueError pentru o stare invalida (nu o ignoram în tacere).
+    Aplica decizia utilizatorului. Intoarce False daca destinatia nu exista.
+    Ridica ValueError pentru o stare invalida (nu o ignoram in tacere).
     """
     if new_status not in VALID_STATUSES:
         raise ValueError(f"Stare invalida: {new_status!r}")
@@ -133,9 +133,9 @@ def set_status(conn: sqlite3.Connection, process_name: str, group_key: str,
 
 def load_decisions(conn: sqlite3.Connection) -> dict:
     """
-    {(proces, cheie): stare} pentru TOATE destinațiile cu rând. Watcher-ul
-    reîncarca asta la fiecare ciclu, ca decizia luata în dashboard sa
-    se aplice în câteva secunde, fara repornire.
+    {(proces, cheie): stare} pentru TOATE destinatiile cu rand. Watcher-ul
+    reincarca asta la fiecare ciclu, ca decizia luata in dashboard sa
+    se aplice in cateva secunde, fara repornire.
     """
     cur = conn.execute("SELECT process_name, group_key, status FROM destination_status")
     return {(p, k): s for p, k, s in cur.fetchall()}
@@ -171,14 +171,14 @@ _STATUS_PRIORITY = {SUSPICIOUS: 2, NORMAL: 1, PENDING: 0}
 
 def migrate_to_entities(conn: sqlite3.Connection, entity_fn) -> int:
     """
-    Strânge rândurile existente pe "entitate" (de ex. 29 de blocuri de IP-uri
-    Google devin un singur rând "Google"). entity_fn(group_key, group_type)
-    întoarce (cheie, tip) - vezi companies.entity_for.
+    Strange randurile existente pe "entitate" (de ex. 29 de blocuri de IP-uri
+    Google devin un singur rand "Google"). entity_fn(group_key, group_type)
+    intoarce (cheie, tip) - vezi companies.entity_for.
 
-    La contopire câștiga decizia cea mai "prudenta": suspect > normal > de
+    La contopire castiga decizia cea mai "prudenta": suspect > normal > de
     verificat. Daca ai spus "E normal" pentru amazonaws.com, decizia acopera
-    acum tot "Amazon". Idempotenta: rândurile deja migrate nu se mai ating.
-    Întoarce numarul de rânduri vechi înlocuite.
+    acum tot "Amazon". Idempotenta: randurile deja migrate nu se mai ating.
+    Intoarce numarul de randuri vechi inlocuite.
     """
     rows = conn.execute("""
         SELECT process_name, group_key, group_type, status, first_seen, last_seen,
@@ -188,11 +188,11 @@ def migrate_to_entities(conn: sqlite3.Connection, entity_fn) -> int:
     """).fetchall()
 
     merged = {}      # (proces, cheie_entitate) -> dict
-    replaced = []    # (proces, cheie veche) de șters
+    replaced = []    # (proces, cheie veche) de sters
     for process, key, gtype, status, first, last, decided, ip, host in rows:
         ekey, etype = entity_fn(key, gtype)
         if (ekey, etype) == (key, gtype):
-            continue  # deja entitate (sau destinație fara companie cunoscuta)
+            continue  # deja entitate (sau destinatie fara companie cunoscuta)
         replaced.append((process, key))
         cur = merged.get((process, ekey))
         if cur is None:
@@ -215,7 +215,7 @@ def migrate_to_entities(conn: sqlite3.Connection, entity_fn) -> int:
         existing = conn.execute(
             "SELECT status, first_seen, last_seen, decided_at FROM destination_status "
             "WHERE process_name = ? AND group_key = ?", (process, ekey)).fetchone()
-        if existing:  # entitatea exista deja (ex. rulare anterioara) - contopim și cu ea
+        if existing:  # entitatea exista deja (ex. rulare anterioara) - contopim si cu ea
             ex_status, ex_first, ex_last, ex_decided = existing
             if _STATUS_PRIORITY[ex_status] >= _STATUS_PRIORITY[m["status"]]:
                 m["status"], m["decided"] = ex_status, ex_decided

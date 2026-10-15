@@ -1,6 +1,6 @@
 """
-Teste pentru scrierea în baza doar a conexiunilor NOI, inclusiv dovada ca
-analiza de risc da același rezultat pe date "doar conexiuni noi" ca pe datele
+Teste pentru scrierea in baza doar a conexiunilor NOI, inclusiv dovada ca
+analiza de risc da acelasi rezultat pe date "doar conexiuni noi" ca pe datele
 vechi, scrise la fiecare secunda.
 
 Rulare: python3 -m pytest test_collection.py -v
@@ -31,7 +31,7 @@ def rows(c):
 class TestOnlyNewConnectionsAreStored:
     def test_same_open_connection_is_stored_once(self, conn):
         h = Harness(conn, {})
-        for _ in range(10):  # aceeași conexiune, vazuta la 10 citiri la rând
+        for _ in range(10):  # aceeasi conexiune, vazuta la 10 citiri la rand
             h.cycle([fake_conn("9.9.9.1", local_port=50000)])
         assert rows(conn) == [("9.9.9.1", 50000)]
 
@@ -44,8 +44,8 @@ class TestOnlyNewConnectionsAreStored:
     def test_connection_that_closes_and_reappears_is_stored_again(self, conn):
         h = Harness(conn, {})
         h.cycle([fake_conn("9.9.9.1", local_port=50000)])
-        h.cycle([])                                            # s-a închis
-        h.cycle([fake_conn("9.9.9.1", local_port=50000)])      # același port reutilizat mai târziu
+        h.cycle([])                                            # s-a inchis
+        h.cycle([fake_conn("9.9.9.1", local_port=50000)])      # acelasi port reutilizat mai tarziu
         assert len(rows(conn)) == 2
 
     def test_two_parallel_connections_to_same_ip_are_both_stored(self, conn):
@@ -61,7 +61,7 @@ class TestOnlyNewConnectionsAreStored:
 
 
 class TestRiskAnalysisUnchanged:
-    """Analiza trebuie sa vada același lucru, fie ca primește fiecare citire, fie doar conexiunile noi."""
+    """Analiza trebuie sa vada acelasi lucru, fie ca primeste fiecare citire, fie doar conexiunile noi."""
 
     START = datetime(2026, 10, 14, 10, 0, tzinfo=timezone.utc)
 

@@ -1,28 +1,28 @@
 #!/bin/bash
 #
 # Simuleaza un canal de beaconing C2: cereri HTTP repetate, la interval fix,
-# catre o singura destinație. Folosit pentru a testa detecția de
+# catre o singura destinatie. Folosit pentru a testa detectia de
 # CONCENTRARE + REGULARITATE din baseline_v5.py.
 #
-# NOU: durata configurabila, se oprește singur - nu mai trebuie Ctrl+C manual.
+# NOU: durata configurabila, se opreste singur - nu mai trebuie Ctrl+C manual.
 #
 # Rulare: ./simulate_beaconing.sh
-# Oprire: automata, dupa DURATION_MINUTES (sau Ctrl+C oricând, manual)
+# Oprire: automata, dupa DURATION_MINUTES (sau Ctrl+C oricand, manual)
 #
-# IMPORTANT: ruleaza acest script ÎN PARALEL cu watcher_v6.py, într-un
-# terminal separat, ca traficul generat aici sa fie și el înregistrat.
+# IMPORTANT: ruleaza acest script IN PARALEL cu watcher_v6.py, intr-un
+# terminal separat, ca traficul generat aici sa fie si el inregistrat.
 
-TARGET_IP="93.184.216.34"   # IP public de test (poți schimba cu altul real)
+TARGET_IP="93.184.216.34"   # IP public de test (poti schimba cu altul real)
 TARGET_PORT="80"
 INTERVAL_SECONDS=60
 TIMEOUT_SECONDS=2
-DURATION_MINUTES=45          # se oprește singur dupa atâtea minute
+DURATION_MINUTES=45          # se opreste singur dupa atatea minute
 
 end_time=$(( $(date +%s) + DURATION_MINUTES * 60 ))
 
 echo "[*] Simulez beaconing catre http://${TARGET_IP}:${TARGET_PORT}/"
 echo "[*] Interval: ${INTERVAL_SECONDS}s, timeout per cerere: ${TIMEOUT_SECONDS}s"
-echo "[*] Durata: ${DURATION_MINUTES} minute (se oprește automat) - sau Ctrl+C oricând"
+echo "[*] Durata: ${DURATION_MINUTES} minute (se opreste automat) - sau Ctrl+C oricand"
 echo "[*] Estimat: ~$(( DURATION_MINUTES * 60 / INTERVAL_SECONDS )) cereri"
 echo ""
 
@@ -36,4 +36,4 @@ while [ "$(date +%s)" -lt "$end_time" ]; do
 done
 
 echo ""
-echo "[*] Gata - ${count} cereri trimise în total, în ${DURATION_MINUTES} minute."
+echo "[*] Gata - ${count} cereri trimise in total, in ${DURATION_MINUTES} minute."

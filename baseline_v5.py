@@ -2,14 +2,14 @@
 """
 Etapa 2: Analiza baseline + detectie anomalii.
 
-Citește din traffic_monitor.db (populat de collector.py sau de
-generate_test_data.py) și pentru fiecare proces calculeaza:
+Citeste din traffic_monitor.db (populat de collector.py sau de
+generate_test_data.py) si pentru fiecare proces calculeaza:
 
-1. Baseline de volum: cate conexiuni face procesul, în medie, pe ora
-2. Set de destinatii "obișnuite" (IP-uri vazute recurent)
+1. Baseline de volum: cate conexiuni face procesul, in medie, pe ora
+2. Set de destinatii "obisnuite" (IP-uri vazute recurent)
 3. Regularitatea intervalelor dintre conexiuni (semnal de beaconing)
 
-Apoi scoreaza fiecare proces 0-100 (risc de anomalie) și explica DE CE.
+Apoi scoreaza fiecare proces 0-100 (risc de anomalie) si explica DE CE.
 
 Rulare: python3 baseline.py
 """
@@ -47,39 +47,39 @@ BEACONING_CV_THRESHOLD = 0.15      # coeficient de variatie (stdev/medie) - sub 
                                      # distinge cele doua cazuri corect, cel relativ da.
 CONCENTRATION_WEIGHT = 30          # puncte de risc pt. trafic concentrat pe putine destinatii fixe
 BEACONING_WEIGHT = 50              # puncte de risc pt. pattern de beaconing
-VOLUME_ANOMALY_WEIGHT = 20         # puncte de risc pt. volum neobișnuit de mare
+VOLUME_ANOMALY_WEIGHT = 20         # puncte de risc pt. volum neobisnuit de mare
 
 MAX_BURST_GAP_SECONDS = 600        # gol de peste 10 min = sesiune de activitate SEPARATa, nu continuare
                                      # DESCOPERIT EMPIRIC: media/deviatia standard NU sunt robuste la
-                                     # valori extreme - un singur gol mare (ex. o pauza de zile între
-                                     # doua sesiuni de trafic ale aceluiași proces) poate distruge complet
+                                     # valori extreme - un singur gol mare (ex. o pauza de zile intre
+                                     # doua sesiuni de trafic ale aceluiasi proces) poate distruge complet
                                      # calculul de regularitate, mascand un pattern altfel aproape perfect
                                      # (caz real: 44 de sesiuni perfect regulate la ~62s, CV=0.2% izolat,
-                                     # dar CV=781% daca intra în calcul și un gol de 35 de zile din urma)
+                                     # dar CV=781% daca intra in calcul si un gol de 35 de zile din urma)
 
-# Praguri pentru regula de CONCENTRARE (înlocuiește vechea regula de "unicitate")
-MAX_DISTINCT_IPS_FOR_CONCENTRATION = 3   # daca procesul vorbește cu MAI MULTE IP-uri distincte decat atat, îl consideram "divers" (normal), nu concentrat
+# Praguri pentru regula de CONCENTRARE (inlocuieste vechea regula de "unicitate")
+MAX_DISTINCT_IPS_FOR_CONCENTRATION = 3   # daca procesul vorbeste cu MAI MULTE IP-uri distincte decat atat, il consideram "divers" (normal), nu concentrat
 CONCENTRATION_RATIO_THRESHOLD = 0.7      # daca un singur IP acopera peste 70% din conexiunile externe, e concentrare suspecta
 
 # Praguri pentru reputatia externa (AbuseIPDB)
 
 # Prag pentru deduplicare de sesiuni (vezi deduplicate_into_sessions mai jos)
-SESSION_GAP_SECONDS = 3.0          # conexiuni catre aceeași destinatie la interval sub atat = aceeași "sesiune", nu evenimente separate
+SESSION_GAP_SECONDS = 3.0          # conexiuni catre aceeasi destinatie la interval sub atat = aceeasi "sesiune", nu evenimente separate
 
 
 def deduplicate_into_sessions(connections: list) -> list:
     """
     Colectorul face polling periodic (ex. la 1s), deci o conexiune care
-    traiește 1-2 secunde poate fi "vazuta" de 2+ ori consecutiv - o data
-    la fiecare interogare cat timp conexiunea era înca activa.
+    traieste 1-2 secunde poate fi "vazuta" de 2+ ori consecutiv - o data
+    la fiecare interogare cat timp conexiunea era inca activa.
 
-    Fara deduplicare, asta strica regularitatea beaconing-ului: în loc de
+    Fara deduplicare, asta strica regularitatea beaconing-ului: in loc de
     un eveniment "conexiune facuta" la fiecare 60s, avem PERECHI de
     evenimente (0s, 60s, 61s, 120s, 121s...) - intervalele devin neregulate,
-    deși comportamentul de fond E regulat.
+    desi comportamentul de fond E regulat.
 
-    Grupam conexiuni consecutive catre ACEEAȘI destinatie (ip+port), aflate
-    la mai putin de SESSION_GAP_SECONDS una de alta, într-o singura "sesiune"
+    Grupam conexiuni consecutive catre ACEEASI destinatie (ip+port), aflate
+    la mai putin de SESSION_GAP_SECONDS una de alta, intr-o singura "sesiune"
     - pastram doar primul timestamp din fiecare grup.
     """
     if not connections:
@@ -95,7 +95,7 @@ def deduplicate_into_sessions(connections: list) -> list:
     for c in sorted_conns:
         key = (c["remote_ip"], c["remote_port"])
         if key != current_key or (c["timestamp"] - last_timestamp).total_seconds() > SESSION_GAP_SECONDS:
-            # început de sesiune noua (destinatie diferita SAU gap mare de timp)
+            # inceput de sesiune noua (destinatie diferita SAU gap mare de timp)
             sessions.append(c)
             current_key = key
         last_timestamp = c["timestamp"]
@@ -107,18 +107,18 @@ def deduplicate_into_sessions(connections: list) -> list:
 
 def split_into_bursts(timestamps: list, max_gap_seconds: float = MAX_BURST_GAP_SECONDS) -> list:
     """
-    Împarte o lista ordonata de timestamp-uri în "burst-uri" separate,
-    acolo unde golul dintre doua timestamp-uri consecutive depașește
+    Imparte o lista ordonata de timestamp-uri in "burst-uri" separate,
+    acolo unde golul dintre doua timestamp-uri consecutive depaseste
     max_gap_seconds. Complementul lui deduplicate_into_sessions: acolo
     uneam evenimente prea apropiate (polling dublu), aici separam
     evenimente prea departate (sesiuni de activitate distincte).
 
     De ce conteaza: analiza de regularitate (beaconing) calculeaza media
-    și deviatia standard a intervalelor - ambele extrem de sensibile la
+    si deviatia standard a intervalelor - ambele extrem de sensibile la
     o singura valoare extrema. Fara separare pe burst-uri, un gol mare
-    între doua sesiuni de activitate distincte (ex. procesul a tacut
-    zile întregi, apoi a reînceput) ar strica regularitatea calculata
-    pe tot istoricul, deși fiecare sesiune în parte poate fi perfect
+    intre doua sesiuni de activitate distincte (ex. procesul a tacut
+    zile intregi, apoi a reinceput) ar strica regularitatea calculata
+    pe tot istoricul, desi fiecare sesiune in parte poate fi perfect
     regulata.
     """
     if not timestamps:
@@ -150,9 +150,9 @@ def load_connections(conn: sqlite3.Connection) -> dict:
 
 def analyze_process(process_name: str, connections: list, all_destinations: dict) -> dict:
     """
-    Analizeaza un singur proces și întoarce un raport cu scor de risc.
+    Analizeaza un singur proces si intoarce un raport cu scor de risc.
     all_destinations = dict {ip: set(procese care s-au conectat la acel ip)}
-    folosit ca sa știm daca o destinatie e "unica" pentru acest proces.
+    folosit ca sa stim daca o destinatie e "unica" pentru acest proces.
     """
     n = len(connections)
     report = {
@@ -166,15 +166,15 @@ def analyze_process(process_name: str, connections: list, all_destinations: dict
         report["reasons"].append(f"Prea putine date ({n} conexiuni) - baseline nesigur")
         return report
 
-    # NOU: deduplicam conexiunile în sesiuni, ÎNAINTE de orice alt calcul.
-    # Fara asta, polling-ul frecvent (1s) "vede" aceeași conexiune de mai
-    # multe ori și strica regularitatea intervalelor.
+    # NOU: deduplicam conexiunile in sesiuni, INAINTE de orice alt calcul.
+    # Fara asta, polling-ul frecvent (1s) "vede" aceeasi conexiune de mai
+    # multe ori si strica regularitatea intervalelor.
     connections = deduplicate_into_sessions(connections)
     n_before_dedup = n
     n = len(connections)
     if n < n_before_dedup:
         report["reasons"].append(
-            f"Deduplicare: {n_before_dedup} înregistrari brute -> {n} sesiuni reale de conexiune"
+            f"Deduplicare: {n_before_dedup} inregistrari brute -> {n} sesiuni reale de conexiune"
         )
 
     if n < MIN_SAMPLES_FOR_BASELINE:
@@ -199,10 +199,10 @@ def analyze_process(process_name: str, connections: list, all_destinations: dict
         )
         return report
 
-    # --- 1. CONCENTRARE vs DIVERSITATE (înlocuiește vechea regula de "unicitate") ---
-    # Ideea: nu conteaza daca un IP e "unic în tot sistemul" (aproape orice site
+    # --- 1. CONCENTRARE vs DIVERSITATE (inlocuieste vechea regula de "unicitate") ---
+    # Ideea: nu conteaza daca un IP e "unic in tot sistemul" (aproape orice site
     # vizitat de firefox e "unic" - e normal, semn de diversitate/browsing uman).
-    # Conteaza daca ACEST proces vorbește cu FOARTE PUtINE destinatii fixe,
+    # Conteaza daca ACEST proces vorbeste cu FOARTE PUtINE destinatii fixe,
     # concentrat - asta seamana cu un canal de C2, nu cu navigare normala.
     ip_counts = defaultdict(int)
     for c in external_connections:
@@ -219,7 +219,7 @@ def analyze_process(process_name: str, connections: list, all_destinations: dict
 
     if is_concentrated:
         # semnal suplimentar: daca acel IP dominant nu e vazut la niciun alt proces,
-        # crește suspiciunea (nu e o infrastructura comuna/partajata, gen CDN)
+        # creste suspiciunea (nu e o infrastructura comuna/partajata, gen CDN)
         seen_by_others = len(all_destinations.get(top_ip, set())) > 1
         report["risk_score"] += CONCENTRATION_WEIGHT
         report["reasons"].append(
@@ -236,8 +236,8 @@ def analyze_process(process_name: str, connections: list, all_destinations: dict
     # --- 2. Regularitatea intervalelor, CALCULATa DOAR PE TRAFIC EXTERN ---
     # (beaconing catre routerul local e normal; beaconing catre internet, nu)
     #
-    # NOU: împartim mai întai pe burst-uri (vezi split_into_bursts) și analizam
-    # doar cel mai mare - altfel un gol mare între doua sesiuni de activitate
+    # NOU: impartim mai intai pe burst-uri (vezi split_into_bursts) si analizam
+    # doar cel mai mare - altfel un gol mare intre doua sesiuni de activitate
     # distincte (zile/saptamani) distruge complet media/deviatia standard,
     # mascand un pattern de beaconing altfel foarte clar.
     all_timestamps = sorted(c["timestamp"] for c in external_connections)
@@ -246,7 +246,7 @@ def analyze_process(process_name: str, connections: list, all_destinations: dict
 
     if len(bursts) > 1:
         report["reasons"].append(
-            f"Activitate împartita în {len(bursts)} sesiuni separate (gol > "
+            f"Activitate impartita in {len(bursts)} sesiuni separate (gol > "
             f"{MAX_BURST_GAP_SECONDS // 60:.0f} min); regularitatea se analizeaza "
             f"doar pe cea mai mare ({len(timestamps)} evenimente)"
         )
@@ -261,8 +261,8 @@ def analyze_process(process_name: str, connections: list, all_destinations: dict
             stdev_interval = statistics.stdev(intervals) if len(intervals) > 1 else 0
 
             # NOU: folosim coeficientul de variatie (stdev/medie), nu doar
-            # deviatia absoluta. Motiv: un stdev de 5s înseamna regularitate
-            # STRaNSa la un interval de 60s (variatie 8%), dar înseamna
+            # deviatia absoluta. Motiv: un stdev de 5s inseamna regularitate
+            # STRaNSa la un interval de 60s (variatie 8%), dar inseamna
             # ZGOMOT COMPLET la un interval de 3s (variatie 166%) - pragul
             # absolut singur confunda cele doua situatii (fals pozitiv gasit
             # empiric la VS Code: interval~3s, stdev~4.93s, sub pragul de 5s,
@@ -284,7 +284,7 @@ def analyze_process(process_name: str, connections: list, all_destinations: dict
                     f"semn tipic de comunicare automatizata cu un server C2"
                 )
 
-    # --- 3. Volum neobișnuit (comparat cu ce vad celelalte procese) ---
+    # --- 3. Volum neobisnuit (comparat cu ce vad celelalte procese) ---
     # Simplificat pentru MVP: procesele cu MULT mai multe conexiuni decat media generala
     report["_raw_intervals_mean"] = mean_interval if 'mean_interval' in dir() else None
 
@@ -296,7 +296,7 @@ def main():
     by_process = load_connections(conn)
 
     if not by_process:
-        print("[!] Nu exista date în baza de date. Ruleaza mai întai collector.py sau generate_test_data.py")
+        print("[!] Nu exista date in baza de date. Ruleaza mai intai collector.py sau generate_test_data.py")
         return
 
     # construim harta globala: ce IP-uri a atins fiecare proces
@@ -314,7 +314,7 @@ def main():
         report = analyze_process(process_name, connections, all_destinations)
         reports.append(report)
 
-    # sortam dupa risc descrescator, ca sa vezi mai întai ce e mai suspect
+    # sortam dupa risc descrescator, ca sa vezi mai intai ce e mai suspect
     reports.sort(key=lambda r: r["risk_score"], reverse=True)
 
     for r in reports:

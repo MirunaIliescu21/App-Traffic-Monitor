@@ -2,9 +2,9 @@
 """
 Etapa 1: Colector proces <-> conexiune de retea.
 
-Ruleaza periodic, citește conexiunile active de pe sistem (TCP/UDP),
+Ruleaza periodic, citeste conexiunile active de pe sistem (TCP/UDP),
 le asociaza cu procesul care le-a deschis (PID, nume, hash binar)
-și le salveaza în SQLite pentru analiza ulterioara (baseline + detectie).
+si le salveaza in SQLite pentru analiza ulterioara (baseline + detectie).
 
 Rulare: sudo python3 collector.py
 (are nevoie de sudo pentru a vedea toate conexiunile, nu doar ale userului curent)
@@ -54,7 +54,7 @@ def hash_binary(path: str) -> str | None:
     """
     Calculeaza SHA256 al binarului executabilului.
     Util mai tarziu pentru a detecta daca binarul s-a schimbat
-    (semn posibil de compromitere/backdoor) între rulari.
+    (semn posibil de compromitere/backdoor) intre rulari.
     """
     if not path:
         return None
@@ -70,7 +70,7 @@ def hash_binary(path: str) -> str | None:
 
 def get_process_info(pid: int, cache: dict) -> tuple[str, str, str]:
     """
-    Functia returneaza numele, path-ul și hash-ul unui proces si
+    Functia returneaza numele, path-ul si hash-ul unui proces si
     face cache simplu ca sa nu recalculam hash-ul de fiecare data (e costisitor).
     """
     if pid in cache:
@@ -89,13 +89,13 @@ def get_process_info(pid: int, cache: dict) -> tuple[str, str, str]:
 
 
 def collect_once(conn: sqlite3.Connection, process_cache: dict) -> int:
-    """O singura trecere de colectare. Întoarce numarul de conexiuni salvate."""
+    """O singura trecere de colectare. Intoarce numarul de conexiuni salvate."""
     timestamp = datetime.now(timezone.utc).isoformat()
     rows = []
 
-    # kind="inet" prinde atat TCP cat și UDP, IPv4 și IPv6
+    # kind="inet" prinde atat TCP cat si UDP, IPv4 si IPv6
     for conn_info in psutil.net_connections(kind="inet"):
-        # Ne intereseaza doar conexiunile cu adresa la distanta (nu porturile locale în ascultare fara peer)
+        # Ne intereseaza doar conexiunile cu adresa la distanta (nu porturile locale in ascultare fara peer)
         if not conn_info.raddr:
             continue
 
@@ -133,7 +133,7 @@ def collect_once(conn: sqlite3.Connection, process_cache: dict) -> int:
 
 
 def main():
-    print(f"[*] Pornesc colectorul, salvez în {DB_PATH}")
+    print(f"[*] Pornesc colectorul, salvez in {DB_PATH}")
     print(f"[*] Interval de polling: {POLL_INTERVAL_SECONDS}s")
     print("[*] Ctrl+C pentru oprire\n")
 
@@ -147,7 +147,7 @@ def main():
             elapsed = time.time() - start
             print(f"[{datetime.now().strftime('%H:%M:%S')}] {n} conexiuni salvate ({elapsed:.2f}s)")
 
-            # golim cache-ul din cand în cand, ca sa prindem procese noi/schimbate
+            # golim cache-ul din cand in cand, ca sa prindem procese noi/schimbate
             if len(process_cache) > 500:
                 process_cache.clear()
 

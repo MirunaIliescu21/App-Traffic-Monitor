@@ -7,7 +7,7 @@ Ruleaza in PARALEL cu watcher.py, intr-un terminal separat:
 
 Deschide browser la: http://localhost:5000
 
-Citește traficul din baza de date și, in plus, scrie DOAR deciziile
+Citeste traficul din baza de date si, in plus, scrie DOAR deciziile
 utilizatorului despre destinatii noi ("E normal" / "Nu recunosc") in
 tabela destination_status - nu modifica niciodata conexiunile colectate.
 Compatibil cu watcher_v6.py (traffic_monitor.db).
@@ -43,7 +43,7 @@ def get_db():
 
 
 def read_recent_alerts(n=20) -> list[dict]:
-    """Citește ultimele N alerte din alerts.log."""
+    """Citeste ultimele N alerte din alerts.log."""
     if not os.path.exists(ALERTS_LOG_PATH):
         return []
     lines = []
@@ -71,7 +71,7 @@ def read_recent_inbound(conn, n=20) -> list[dict]:
 def read_process_summary(conn) -> list[dict]:
     """
     Rezumat per proces: total conexiuni externe unice din ultimele 24h,
-    sortate dupa activitate, ca sa vedem repede cine "vorbește" cel mai mult.
+    sortate dupa activitate, ca sa vedem repede cine "vorbeste" cel mai mult.
     """
     cutoff = (datetime.now(timezone.utc) - timedelta(hours=24)).isoformat()
     cur = conn.execute("""
@@ -108,7 +108,7 @@ def read_recent_new_connections(conn, n=30) -> list[dict]:
 
 
 def _with_display(row: dict) -> dict:
-    """Adauga titlul și descrierea in limbaj simplu (companie in loc de cifre)."""
+    """Adauga titlul si descrierea in limbaj simplu (companie in loc de cifre)."""
     title, description = companies.display(row["group_key"], row["group_type"])
     return {**row, "title": title, "description": description}
 
@@ -119,7 +119,7 @@ def _with_display(row: dict) -> dict:
 def api_status():
     conn = get_db()
     if conn is None:
-        return jsonify({"error": "traffic_monitor.db negasit — pornește watcher.py mai intâi"})
+        return jsonify({"error": "traffic_monitor.db negasit — porneste watcher.py mai intai"})
 
     process_summary = read_process_summary(conn)
     inbound = read_recent_inbound(conn)
@@ -155,7 +155,7 @@ def _request_is_trusted() -> bool:
     """
     Dashboard-ul n-are autentificare (ruleaza doar pe 127.0.0.1), dar un site
     deschis in alt tab poate trimite cereri catre localhost. Ca nicio pagina
-    straina sa nu poata apasa "E normal" in locul utilizatorului (și astfel sa
+    straina sa nu poata apasa "E normal" in locul utilizatorului (si astfel sa
     amuteasca alertele), acceptam decizii doar daca:
       - Host e adresa dashboard-ului (blocheaza DNS rebinding),
       - Origin, daca exista, e tot dashboard-ul,
@@ -183,7 +183,7 @@ def api_decision():
         return jsonify({"error": "date invalide"}), 400
     conn = get_db()
     if conn is None:
-        return jsonify({"error": "baza de date lipsește"}), 503
+        return jsonify({"error": "baza de date lipseste"}), 503
     try:
         found = ds.set_status(conn, process_name, group_key, status)
     finally:
@@ -425,9 +425,9 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       <div class="card-count" id="pending-count">—</div>
     </div>
     <div class="card-intro">
-      Programe pe care le știam au contactat pentru prima data destinatii noi.
-      Spune-mi daca le recunoști: „E normal” nu te mai deranjeaza pentru ele,
-      „Nu recunosc” te anunta de fiecare data când revin.
+      Programe pe care le stiam au contactat pentru prima data destinatii noi.
+      Spune-mi daca le recunosti: „E normal” nu te mai deranjeaza pentru ele,
+      „Nu recunosc” te anunta de fiecare data cand revin.
     </div>
     <div id="pending-list"></div>
   </div>
@@ -500,7 +500,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
             <th>Sursa (atacator)</th>
             <th>Proces vizat</th>
             <th>Port local</th>
-            <th>Când</th>
+            <th>Cand</th>
           </tr>
         </thead>
         <tbody id="inbound-table"></tbody>
