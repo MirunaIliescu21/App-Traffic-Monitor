@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
 Diagnostic: de ce beaconing-ul lui curl nu s-a mai declanșat, deși traficul
-arată tot concentrat 100% pe un singur IP?
+arata tot concentrat 100% pe un singur IP?
 
-Recalculează exact ce face analyze_process() intern, dar afișează și
-intervalele brute, ca să vedem dacă variația vine dintr-un gol izolat
+Recalculeaza exact ce face analyze_process() intern, dar afișeaza și
+intervalele brute, ca sa vedem daca variația vine dintr-un gol izolat
 (ca la testul din 17 august) sau dintr-un jitter distribuit uniform.
 
 Rulare: python3 diagnose_curl_beaconing.py
@@ -21,12 +21,12 @@ DB_PATH = "traffic_monitor.db"
 
 def split_into_bursts(timestamps: list, max_gap_seconds: float = 600) -> list:
     """
-    Împarte o listă de timestamp-uri în "burst-uri" separate, acolo unde
-    golul dintre două consecutive depășește max_gap_seconds (implicit 10
-    minute - mult peste jitter-ul așteptat de rețea, mult sub o pauză
-    reală între sesiuni de test separate).
+    Împarte o lista de timestamp-uri în "burst-uri" separate, acolo unde
+    golul dintre doua consecutive depașește max_gap_seconds (implicit 10
+    minute - mult peste jitter-ul așteptat de rețea, mult sub o pauza
+    reala între sesiuni de test separate).
 
-    Descoperire empirică: fără asta, un singur gol de 35 de zile (între
+    Descoperire empirica: fara asta, un singur gol de 35 de zile (între
     testul din 17 august și cel de azi) distruge complet media/deviația
     standard calculate pe tot setul - un exemplu clasic de ne-robustețe
     a acestor statistici la valori extreme.
@@ -59,18 +59,18 @@ def main():
     external = [c for c in connections if not is_private_ip(c["remote_ip"])]
     sessions = deduplicate_into_sessions(external)
 
-    print(f"[*] {len(rows)} înregistrări brute -> {len(external)} externe -> {len(sessions)} sesiuni\n")
+    print(f"[*] {len(rows)} înregistrari brute -> {len(external)} externe -> {len(sessions)} sesiuni\n")
 
     timestamps = sorted(c["timestamp"] for c in sessions)
 
     bursts = split_into_bursts(timestamps, max_gap_seconds=600)
-    print(f"[*] Date împărțite în {len(bursts)} burst-uri (gol > 10 min = sesiune de test separată):\n")
+    print(f"[*] Date împarțite în {len(bursts)} burst-uri (gol > 10 min = sesiune de test separata):\n")
     for i, burst in enumerate(bursts):
         duration_min = (burst[-1] - burst[0]).total_seconds() / 60 if len(burst) > 1 else 0
         print(f"  Burst #{i+1}: {len(burst)} sesiuni, de la {burst[0]} la {burst[-1]} (~{duration_min:.0f} min)")
 
     largest_burst = max(bursts, key=len)
-    print(f"\n[*] Analizăm burst-ul cel mai mare ({len(largest_burst)} sesiuni) izolat:\n")
+    print(f"\n[*] Analizam burst-ul cel mai mare ({len(largest_burst)} sesiuni) izolat:\n")
 
     intervals = [(largest_burst[i+1] - largest_burst[i]).total_seconds() for i in range(len(largest_burst) - 1)]
 

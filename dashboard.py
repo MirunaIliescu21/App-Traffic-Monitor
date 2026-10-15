@@ -2,14 +2,14 @@
 """
 Dashboard web pentru monitorul de trafic.
 
-Rulează in PARALEL cu watcher.py, intr-un terminal separat:
+Ruleaza in PARALEL cu watcher.py, intr-un terminal separat:
   python3 dashboard.py
 
 Deschide browser la: http://localhost:5000
 
 Citește traficul din baza de date și, in plus, scrie DOAR deciziile
-utilizatorului despre destinații noi ("E normal" / "Nu recunosc") in
-tabela destination_status - nu modifică niciodată conexiunile colectate.
+utilizatorului despre destinatii noi ("E normal" / "Nu recunosc") in
+tabela destination_status - nu modifica niciodata conexiunile colectate.
 Compatibil cu watcher_v6.py (traffic_monitor.db).
 """
 
@@ -38,7 +38,7 @@ def get_db():
         return None
     conn = sqlite3.connect(DB_PATH, timeout=10)
     conn.row_factory = sqlite3.Row
-    ds.init_tables(conn)  # no-op dacă există; dashboard-ul poate porni inaintea watcher-ului
+    ds.init_tables(conn)  # no-op daca exista; dashboard-ul poate porni inaintea watcher-ului
     return conn
 
 
@@ -59,7 +59,7 @@ def read_recent_alerts(n=20) -> list[dict]:
 
 
 def read_recent_inbound(conn, n=20) -> list[dict]:
-    """Ultimele N conexiuni primite (atacuri potențiale)."""
+    """Ultimele N conexiuni primite (atacuri potentiale)."""
     cur = conn.execute("""
         SELECT timestamp, process_name, local_port, remote_ip, remote_port
         FROM inbound_events
@@ -71,7 +71,7 @@ def read_recent_inbound(conn, n=20) -> list[dict]:
 def read_process_summary(conn) -> list[dict]:
     """
     Rezumat per proces: total conexiuni externe unice din ultimele 24h,
-    sortate după activitate, ca să vedem repede cine "vorbește" cel mai mult.
+    sortate dupa activitate, ca sa vedem repede cine "vorbește" cel mai mult.
     """
     cutoff = (datetime.now(timezone.utc) - timedelta(hours=24)).isoformat()
     cur = conn.execute("""
@@ -98,7 +98,7 @@ def read_process_summary(conn) -> list[dict]:
 
 
 def read_recent_new_connections(conn, n=30) -> list[dict]:
-    """Ultimele N combinații (proces, IP) văzute pentru prima dată."""
+    """Ultimele N combinatii (proces, IP) vazute pentru prima data."""
     cur = conn.execute("""
         SELECT process_name, remote_ip, remote_hostname, first_seen_at
         FROM notified_pairs
@@ -108,7 +108,7 @@ def read_recent_new_connections(conn, n=30) -> list[dict]:
 
 
 def _with_display(row: dict) -> dict:
-    """Adaugă titlul și descrierea in limbaj simplu (companie in loc de cifre)."""
+    """Adauga titlul și descrierea in limbaj simplu (companie in loc de cifre)."""
     title, description = companies.display(row["group_key"], row["group_type"])
     return {**row, "title": title, "description": description}
 
@@ -119,7 +119,7 @@ def _with_display(row: dict) -> dict:
 def api_status():
     conn = get_db()
     if conn is None:
-        return jsonify({"error": "traffic_monitor.db negăsit — pornește watcher.py mai intâi"})
+        return jsonify({"error": "traffic_monitor.db negasit — pornește watcher.py mai intâi"})
 
     process_summary = read_process_summary(conn)
     inbound = read_recent_inbound(conn)
@@ -132,7 +132,7 @@ def api_status():
     marked.sort(key=lambda d: d["decided_at"] or "", reverse=True)
     decision_log = ds.list_decision_log(conn, 30)
 
-    # număr total de conexiuni din ultimele 24h
+    # numar total de conexiuni din ultimele 24h
     cutoff = (datetime.now(timezone.utc) - timedelta(hours=24)).isoformat()
     cur = conn.execute("SELECT COUNT(*) FROM connections WHERE timestamp > ?", (cutoff,))
     total_24h = cur.fetchone()[0]
@@ -153,14 +153,14 @@ def api_status():
 
 def _request_is_trusted() -> bool:
     """
-    Dashboard-ul n-are autentificare (rulează doar pe 127.0.0.1), dar un site
-    deschis in alt tab poate trimite cereri către localhost. Ca nicio pagină
-    străină să nu poată apăsa "E normal" in locul utilizatorului (și astfel să
-    amuțească alertele), acceptăm decizii doar dacă:
-      - Host e adresa dashboard-ului (blochează DNS rebinding),
-      - Origin, dacă există, e tot dashboard-ul,
-      - corpul e JSON (un site străin nu poate trimite JSON cross-origin fără
-        preflight CORS, la care nu răspundem niciodată).
+    Dashboard-ul n-are autentificare (ruleaza doar pe 127.0.0.1), dar un site
+    deschis in alt tab poate trimite cereri catre localhost. Ca nicio pagina
+    straina sa nu poata apasa "E normal" in locul utilizatorului (și astfel sa
+    amuteasca alertele), acceptam decizii doar daca:
+      - Host e adresa dashboard-ului (blocheaza DNS rebinding),
+      - Origin, daca exista, e tot dashboard-ul,
+      - corpul e JSON (un site strain nu poate trimite JSON cross-origin fara
+        preflight CORS, la care nu raspundem niciodata).
     """
     if request.headers.get("Host", "") not in ALLOWED_HOSTS:
         return False
@@ -172,9 +172,9 @@ def _request_is_trusted() -> bool:
 
 @app.route("/api/decision", methods=["POST"])
 def api_decision():
-    """Aplică decizia utilizatorului: {process_name, group_key, status}."""
+    """Aplica decizia utilizatorului: {process_name, group_key, status}."""
     if not _request_is_trusted():
-        return jsonify({"error": "cerere refuzată"}), 403
+        return jsonify({"error": "cerere refuzata"}), 403
     data = request.get_json(silent=True) or {}
     process_name = data.get("process_name")
     group_key = data.get("group_key")
@@ -189,11 +189,11 @@ def api_decision():
     finally:
         conn.close()
     if not found:
-        return jsonify({"error": "destinația nu există"}), 404
+        return jsonify({"error": "destinatia nu exista"}), 404
     return jsonify({"ok": True, "status": status})
 
 
-# ---------- Interfața web ----------
+# ---------- Interfata web ----------
 
 DASHBOARD_HTML = """<!DOCTYPE html>
 <html lang="ro">
@@ -347,7 +347,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
   .alert-line.is-risk { color: var(--warning); }
   .alert-line.is-inbound { color: var(--danger); }
 
-  /* Destinații de verificat + butoane */
+  /* Destinatii de verificat + butoane */
   .btn {
     font: inherit; font-size: 12px; font-weight: 600;
     padding: 5px 12px; border-radius: 6px; cursor: pointer;
@@ -418,16 +418,16 @@ DASHBOARD_HTML = """<!DOCTYPE html>
     </div>
   </div>
 
-  <!-- Destinații de verificat: decizia utilizatorului -->
+  <!-- Destinatii de verificat: decizia utilizatorului -->
   <div class="card" id="pending-card">
     <div class="card-header">
       <div class="card-title">🟡 De verificat</div>
       <div class="card-count" id="pending-count">—</div>
     </div>
     <div class="card-intro">
-      Programe pe care le știam au contactat pentru prima dată destinații noi.
-      Spune-mi dacă le recunoști: „E normal” nu te mai deranjează pentru ele,
-      „Nu recunosc” te anunță de fiecare dată când revin.
+      Programe pe care le știam au contactat pentru prima data destinatii noi.
+      Spune-mi daca le recunoști: „E normal” nu te mai deranjeaza pentru ele,
+      „Nu recunosc” te anunta de fiecare data când revin.
     </div>
     <div id="pending-list"></div>
   </div>
@@ -497,7 +497,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       <table>
         <thead>
           <tr>
-            <th>Sursă (atacator)</th>
+            <th>Sursa (atacator)</th>
             <th>Proces vizat</th>
             <th>Port local</th>
             <th>Când</th>
@@ -507,7 +507,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       </table>
     </div>
 
-    <!-- Conexiuni noi văzute -->
+    <!-- Conexiuni noi vazute -->
     <div class="card">
       <div class="card-header">
         <div class="card-title">Conexiuni noi observate</div>
@@ -517,8 +517,8 @@ DASHBOARD_HTML = """<!DOCTYPE html>
         <thead>
           <tr>
             <th>Proces</th>
-            <th>Destinație</th>
-            <th>Prima dată văzut</th>
+            <th>Destinatie</th>
+            <th>Prima data vazut</th>
           </tr>
         </thead>
         <tbody id="newconn-table"></tbody>
@@ -530,9 +530,9 @@ DASHBOARD_HTML = """<!DOCTYPE html>
 </main>
 
 <script>
-// Textele din rețea (nume de host, procese) sunt controlate de terți: le
-// escapăm iNAINTE să ajungă in HTML, altfel un nume de host rău intenționat
-// ar rula cod in pagină.
+// Textele din retea (nume de host, procese) sunt controlate de terti: le
+// escapam iNAINTE sa ajunga in HTML, altfel un nume de host rau intentionat
+// ar rula cod in pagina.
 function esc(v) {
   return String(v ?? '').replace(/[&<>"']/g, c => (
     {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -556,7 +556,7 @@ function render_pending(list) {
     return `
       <div class="pending-item">
         <div class="pending-text">
-          <div class="pending-title"><strong>${esc(x.process_name)}</strong> s-a conectat pentru prima dată la <strong>${esc(x.title)}</strong></div>
+          <div class="pending-title"><strong>${esc(x.process_name)}</strong> s-a conectat pentru prima data la <strong>${esc(x.title)}</strong></div>
           <div class="pending-desc">${esc(x.description)}</div>
           <div class="pending-sub">${esc(where)} · ${fmt_dt(x.first_seen)}</div>
         </div>
@@ -576,22 +576,22 @@ function render_marked(list) {
     return `
       <div class="pending-item">
         <div class="pending-text">
-          <div class="pending-title"><strong>${esc(x.process_name)}</strong> → ${esc(x.title)}
+          <div class="pending-title"><strong>${esc(x.process_name)}</strong> -> ${esc(x.title)}
             <span class="badge ${bad ? 'badge-danger' : 'badge-ok'}">${bad ? 'Nu recunosc' : 'Normal'}</span></div>
           <div class="pending-sub">decis ${fmt_dt(x.decided_at)}</div>
         </div>
         <div class="pending-actions">
-          <button class="btn btn-ghost" data-action="pending" ${attrs}>Anulează decizia</button>
+          <button class="btn btn-ghost" data-action="pending" ${attrs}>Anuleaza decizia</button>
         </div>
       </div>`;
-  }).join('') : '<div class="empty">Nicio decizie incă.</div>';
+  }).join('') : '<div class="empty">Nicio decizie inca.</div>';
 }
 
 function render_log(list) {
   document.getElementById('log-count').textContent = list.length;
   document.getElementById('log-list').innerHTML = list.length ? list.map(x => `
-    <div class="alert-line">${fmt_dt(x.timestamp)} · ${esc(x.process_name)} → ${esc(x.group_key)}:
-      ${esc(STATUS_LABEL[x.old_status] || x.old_status)} → <strong>${esc(STATUS_LABEL[x.new_status] || x.new_status)}</strong></div>
+    <div class="alert-line">${fmt_dt(x.timestamp)} · ${esc(x.process_name)} -> ${esc(x.group_key)}:
+      ${esc(STATUS_LABEL[x.old_status] || x.old_status)} -> <strong>${esc(STATUS_LABEL[x.new_status] || x.new_status)}</strong></div>
   `).join('') : '<div class="empty">Nicio decizie in istoric.</div>';
 }
 
@@ -667,7 +667,7 @@ async function refresh() {
         <td class="muted">${p.unique_ips}</td>
         <td class="ts">${fmt_dt(p.last_seen)}</td>
       </tr>
-    `).join('') || '<tr><td colspan="4" class="empty">Nicio activitate inregistrată incă.</td></tr>';
+    `).join('') || '<tr><td colspan="4" class="empty">Nicio activitate inregistrata inca.</td></tr>';
 
     // Alerte
     document.getElementById('alert-count').textContent = d.recent_alerts.length + ' alerte';
@@ -678,7 +678,7 @@ async function refresh() {
                     : '';
           return `<div class="alert-line ${cls}">${esc(a.raw)}</div>`;
         }).join('')
-      : '<div class="empty">Nicio alertă inregistrată — bine!</div>';
+      : '<div class="empty">Nicio alerta inregistrata — bine!</div>';
 
     // Inbound
     document.getElementById('inbound-count').textContent = d.recent_inbound.length;
@@ -689,7 +689,7 @@ async function refresh() {
         <td class="muted">${c.local_port}</td>
         <td class="ts">${fmt_dt(c.timestamp)}</td>
       </tr>
-    `).join('') || '<tr><td colspan="4" class="empty">Nicio conexiune primită.</td></tr>';
+    `).join('') || '<tr><td colspan="4" class="empty">Nicio conexiune primita.</td></tr>';
 
     // Conexiuni noi
     document.getElementById('newconn-count').textContent = d.recent_new_connections.length;
@@ -703,7 +703,7 @@ async function refresh() {
           <td>${display}</td>
           <td class="ts">${fmt_dt(c.first_seen_at)}</td>
         </tr>`;
-    }).join('') || '<tr><td colspan="3" class="empty">Nicio conexiune nouă incă.</td></tr>';
+    }).join('') || '<tr><td colspan="3" class="empty">Nicio conexiune noua inca.</td></tr>';
 
   } catch (e) {
     document.getElementById('status-dot').className = 'status-dot error';
@@ -711,7 +711,7 @@ async function refresh() {
   }
 }
 
-// Actualizare automată la fiecare 5 secunde
+// Actualizare automata la fiecare 5 secunde
 refresh();
 setInterval(refresh, 5000);
 </script>
@@ -727,7 +727,7 @@ def index():
 
 if __name__ == "__main__":
     print("[*] Dashboard pornit la http://localhost:5000")
-    print("[*] Rulează in paralel cu watcher_v6.py — scrie doar deciziile tale (E normal / Nu recunosc)")
-    print("[*] Actualizare automată la fiecare 5 secunde")
+    print("[*] Ruleaza in paralel cu watcher_v6.py — scrie doar deciziile tale (E normal / Nu recunosc)")
+    print("[*] Actualizare automata la fiecare 5 secunde")
     print("[*] Ctrl+C pentru oprire\n")
     app.run(host="127.0.0.1", port=PORT, debug=False)

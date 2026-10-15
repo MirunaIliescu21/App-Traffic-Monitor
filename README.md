@@ -44,6 +44,35 @@ Fara `sudo`, notificarile desktop functioneaza, dar `psutil` vede doar
 procesele utilizatorului curent. Cu `sudo` se vad toate procesele, dar
 notificarile esueaza (vezi "Limitari").
 
+## Rularea ca serviciu (Linux)
+
+Pe Linux, aplicatia ruleaza ca doua servicii systemd de **utilizator** (watcher
+si dashboard), pornite automat la fiecare login. Se instaleaza fara `sudo`, ca
+serviciile sa ruleze in sesiunea ta si notificarile desktop sa functioneze.
+
+```bash
+./install_service.sh                 # instalare + pornire
+./install_service.sh --uninstall     # oprire + stergere (datele raman)
+
+systemctl --user status trafficmonitor-watcher trafficmonitor-dashboard    # verificare rulare
+journalctl --user -u trafficmonitor-watcher -f                             # log live
+systemctl --user restart trafficmonitor-watcher trafficmonitor-dashboard   # dupa modificari de cod - restart
+systemctl --user stop trafficmonitor-watcher                               # oprire temporara
+```
+
+Dashboard-ul: `http://localhost:5000`. Nu rula `watcher_v6.py` manual cat timp
+serviciul e activ (doi watchere ar scrie in aceeasi baza).
+
+Serviciile ruleaza cat timp utilizatorul e logat. La sleep sau capac inchis
+procesul e inghetat si isi reia lucrul la trezire, fara repornire; in intervalul
+de sleep nu se colecteaza nimic (in log apare un salt de timp). 
+Verificare:
+`systemctl --user show trafficmonitor-watcher -p ActiveEnterTimestamp -p NRestarts`
+(`NRestarts=0` si aceeasi ora de pornire = nu s-a repornit).
+
+Limitare: fiind serviciu de utilizator (fara root), `psutil` vede doar procesele
+utilizatorului curent, nu si pe cele ale sistemului sau ale altor conturi.
+
 ## Interfata web
 
 - **De verificat** - destinatii noi pentru programe cunoscute, cu butoanele
@@ -98,7 +127,7 @@ blocurile Google.
 
 ## Grupare pe companii (`companies.py`)
 
-Doua liste scrise de mana: domenii (`1e100.net` → Google) si intervale de
+Doua liste scrise de mana: domenii (`1e100.net` -> Google) si intervale de
 IP-uri publice cunoscute (acopera adresele fara reverse DNS). Pe datele reale
 de dezvoltare, 96 din 97 de destinatii distincte au fost identificate;
 restul raman "retea neidentificata". Aplicatia nu ghiceste niciodata o

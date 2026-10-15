@@ -1,7 +1,7 @@
 """
-Teste pentru scrierea în bază doar a conexiunilor NOI, inclusiv dovada că
-analiza de risc dă același rezultat pe date "doar conexiuni noi" ca pe datele
-vechi, scrise la fiecare secundă.
+Teste pentru scrierea în baza doar a conexiunilor NOI, inclusiv dovada ca
+analiza de risc da același rezultat pe date "doar conexiuni noi" ca pe datele
+vechi, scrise la fiecare secunda.
 
 Rulare: python3 -m pytest test_collection.py -v
 """
@@ -31,7 +31,7 @@ def rows(c):
 class TestOnlyNewConnectionsAreStored:
     def test_same_open_connection_is_stored_once(self, conn):
         h = Harness(conn, {})
-        for _ in range(10):  # aceeași conexiune, văzută la 10 citiri la rând
+        for _ in range(10):  # aceeași conexiune, vazuta la 10 citiri la rând
             h.cycle([fake_conn("9.9.9.1", local_port=50000)])
         assert rows(conn) == [("9.9.9.1", 50000)]
 
@@ -61,7 +61,7 @@ class TestOnlyNewConnectionsAreStored:
 
 
 class TestRiskAnalysisUnchanged:
-    """Analiza trebuie să vadă același lucru, fie că primește fiecare citire, fie doar conexiunile noi."""
+    """Analiza trebuie sa vada același lucru, fie ca primește fiecare citire, fie doar conexiunile noi."""
 
     START = datetime(2026, 10, 14, 10, 0, tzinfo=timezone.utc)
 

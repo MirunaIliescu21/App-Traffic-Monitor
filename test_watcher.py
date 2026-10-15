@@ -23,7 +23,7 @@ def db_conn():
 
 
 def insert_beacon_connections(conn, process_name, remote_ip, n=10, interval_seconds=60):
-    """Inserează în tabela `connections` un tipar de beacon regulat, gata pentru run_risk_analysis."""
+    """Insereaza în tabela `connections` un tipar de beacon regulat, gata pentru run_risk_analysis."""
     rows = []
     t = datetime.now(timezone.utc) - timedelta(seconds=interval_seconds * n)
     for _ in range(n):
@@ -49,15 +49,15 @@ class TestIsEffectivelyLoopback:
 
     def test_ipv6_mapped_ipv4_loopback(self):
         """
-        REGRESIE: acest format special (IPv6 ce încapsulează un IPv4
-        loopback) a apărut real în log-urile watcher.py și NU era
-        recunoscut de ipaddress.is_loopback simplu - a cauzat o alertă
-        [INBOUND!] falsă pentru o conexiune internă (java pe localhost).
+        REGRESIE: acest format special (IPv6 ce încapsuleaza un IPv4
+        loopback) a aparut real în log-urile watcher.py și NU era
+        recunoscut de ipaddress.is_loopback simplu - a cauzat o alerta
+        [INBOUND!] falsa pentru o conexiune interna (java pe localhost).
         """
         assert is_effectively_loopback("::ffff:127.0.0.1") is True
 
     def test_private_lan_ip_is_not_loopback(self):
-        """IMPORTANT: IP-ul lui Kali (rețea privată, dar altă mașină) NU e loopback."""
+        """IMPORTANT: IP-ul lui Kali (rețea privata, dar alta mașina) NU e loopback."""
         assert is_effectively_loopback("192.168.56.102") is False
 
     def test_public_ip_is_not_loopback(self):
@@ -69,9 +69,9 @@ class TestIsEffectivelyLoopback:
 
 class TestRunRiskAnalysisDeduplication:
     """
-    Testează fix-ul cel mai recent: alertele de risc NU trebuie retrimise
-    la fiecare ciclu de analiză dacă datele nu s-au schimbat (bug găsit
-    empiric - curl oprit tot declanșa aceeași alertă de 3 ori la rând).
+    Testeaza fix-ul cel mai recent: alertele de risc NU trebuie retrimise
+    la fiecare ciclu de analiza daca datele nu s-au schimbat (bug gasit
+    empiric - curl oprit tot declanșa aceeași alerta de 3 ori la rand).
     """
 
     def test_first_alert_fires_notification(self, db_conn):
@@ -92,12 +92,12 @@ class TestRunRiskAnalysisDeduplication:
             run_risk_analysis(db_conn, risk_state)
             run_risk_analysis(db_conn, risk_state)
             assert mock_notify.call_count == 1, (
-                f"Ar trebui o singură notificare pentru date neschimbate, "
+                f"Ar trebui o singura notificare pentru date neschimbate, "
                 f"dar au fost trimise {mock_notify.call_count}"
             )
 
     def test_new_activity_triggers_fresh_alert(self, db_conn):
-        """Dacă apar conexiuni NOI (activitate proaspătă), trebuie să alerteze din nou."""
+        """Daca apar conexiuni NOI (activitate proaspata), trebuie sa alerteze din nou."""
         insert_beacon_connections(db_conn, "curl", "93.184.216.34", n=10)
         risk_state = {}
 
@@ -105,46 +105,46 @@ class TestRunRiskAnalysisDeduplication:
             run_risk_analysis(db_conn, risk_state)
             assert mock_notify.call_count == 1
 
-            # simulăm activitate nouă: mai multe conexiuni curl
+            # simulam activitate noua: mai multe conexiuni curl
             insert_beacon_connections(db_conn, "curl", "93.184.216.34", n=5)
             run_risk_analysis(db_conn, risk_state)
-            assert mock_notify.call_count == 2, "Ar fi trebuit să alerteze din nou pentru activitate nouă"
+            assert mock_notify.call_count == 2, "Ar fi trebuit sa alerteze din nou pentru activitate noua"
 
     def test_state_persisted_and_loaded_prevents_alerts_on_restart(self, db_conn):
         """
-        REGRESIE Fix 2: după o repornire, dacă starea e încărcată din SQLite,
+        REGRESIE Fix 2: dupa o repornire, daca starea e încarcata din SQLite,
         nu se mai trimit alerte pentru procese deja cunoscute ca suspecte.
-        Simulăm o 'repornire' prin load_risk_alert_state -> dict nou -> analiză.
+        Simulam o 'repornire' prin load_risk_alert_state -> dict nou -> analiza.
         """
         from watcher_v6 import load_risk_alert_state, save_risk_alert_state
 
         insert_beacon_connections(db_conn, "curl", "93.184.216.34")
         risk_state = {}
 
-        # prima rulare: alertă trimisă, stare salvată în SQLite
+        # prima rulare: alerta trimisa, stare salvata în SQLite
         with patch.object(watcher_v6, "send_desktop_notification") as mock_notify:
             run_risk_analysis(db_conn, risk_state)
             assert mock_notify.call_count == 1
 
-        # simulăm repornire: încărcăm starea din SQLite în loc de dict gol
+        # simulam repornire: încarcam starea din SQLite în loc de dict gol
         risk_state_after_restart = load_risk_alert_state(db_conn)
-        assert "curl" in risk_state_after_restart  # starea a fost salvată
+        assert "curl" in risk_state_after_restart  # starea a fost salvata
 
-        # după repornire, cu aceleași date, NU ar trebui să mai trimitem alertă
+        # dupa repornire, cu aceleași date, NU ar trebui sa mai trimitem alerta
         with patch.object(watcher_v6, "send_desktop_notification") as mock_notify:
             run_risk_analysis(db_conn, risk_state_after_restart)
             assert mock_notify.call_count == 0, (
-                "După repornire cu stare persistată, nu ar trebui să re-alerteze"
+                "Dupa repornire cu stare persistata, nu ar trebui sa re-alerteze"
             )
 
     def test_time_window_excludes_old_connections(self, db_conn):
         """
         REGRESIE Fix 1: conexiunile mai vechi de 24h nu mai sunt incluse
-        în analiza de risc - verificăm că procesul 'vechi' nu mai apare.
+        în analiza de risc - verificam ca procesul 'vechi' nu mai apare.
         """
         from datetime import timedelta
 
-        # inserăm conexiuni 'vechi' (acum 25h) - ar trebui excluse din analiză
+        # inseram conexiuni 'vechi' (acum 25h) - ar trebui excluse din analiza
         old_time = datetime.now(timezone.utc) - timedelta(hours=25)
         rows = []
         for i in range(10):
@@ -163,14 +163,14 @@ class TestRunRiskAnalysisDeduplication:
         risk_state = {}
         with patch.object(watcher_v6, "send_desktop_notification") as mock_notify:
             run_risk_analysis(db_conn, risk_state)
-            # conexiunile vechi nu ar trebui să declanșeze alertă
+            # conexiunile vechi nu ar trebui sa declanșeze alerta
             assert mock_notify.call_count == 0, (
-                "Conexiunile mai vechi de 24h nu ar trebui să declanșeze alerte"
+                "Conexiunile mai vechi de 24h nu ar trebui sa declanșeze alerte"
             )
 
     def test_low_risk_process_never_notifies(self, db_conn):
-        """Un proces cu trafic normal nu declanșează nicio alertă, la niciun ciclu."""
-        # simulăm firefox: multe IP-uri diferite, interval neregulat
+        """Un proces cu trafic normal nu declanșeaza nicio alerta, la niciun ciclu."""
+        # simulam firefox: multe IP-uri diferite, interval neregulat
         rows = []
         t = datetime.now(timezone.utc) - timedelta(minutes=10)
         offsets = [0, 4, 7, 2, 9, 3, 6, 1, 8, 5]

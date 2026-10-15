@@ -25,7 +25,7 @@ def conn():
     c.close()
 
 
-# ---------- logica pură ----------
+# ---------- logica pura ----------
 
 class TestDecideAction:
     def test_new_destination_with_expired_cooldown_alerts(self):
@@ -102,7 +102,7 @@ def fake_conn(remote_ip, remote_port=443, local_port=50000, pid=1):
 
 
 class Harness:
-    """Rulează cicluri de colectare cu conexiuni și 'DNS' false; adună notificările."""
+    """Ruleaza cicluri de colectare cu conexiuni și 'DNS' false; aduna notificarile."""
 
     def __init__(self, conn, hostnames):
         self.conn = conn
@@ -162,7 +162,7 @@ class TestFullFlow:
         h = Harness(conn, HOSTS)
         h.seed_known("chrome", "google.com")
         h.cycle([fake_conn("9.9.9.1")])
-        h.last_alert.clear()  # simulăm cooldown expirat
+        h.last_alert.clear()  # simulam cooldown expirat
         for _ in range(5):
             h.cycle([fake_conn("9.9.9.1"), fake_conn("9.9.9.2", local_port=50001)])
         assert len(h.alerts("normal")) == 1
@@ -171,10 +171,10 @@ class TestFullFlow:
     def test_cooldown_suppressed_destination_still_listed_as_pending(self, conn):
         h = Harness(conn, HOSTS)
         h.seed_known("chrome", "google.com")
-        h.cycle([fake_conn("9.9.9.1")])          # alertă + cooldown pornit
+        h.cycle([fake_conn("9.9.9.1")])          # alerta + cooldown pornit
         h.cycle([fake_conn("8.8.8.1")])          # Google e deja cunoscut pentru chrome: nu apare nimic nou
         h.hostnames["7.7.7.1"] = "x.other-site.org"
-        h.cycle([fake_conn("7.7.7.1")])          # nouă, dar în cooldown
+        h.cycle([fake_conn("7.7.7.1")])          # noua, dar în cooldown
         assert len(h.alerts("normal")) == 1
         keys = {p["group_key"] for p in ds.list_by_status(conn, ds.PENDING)}
         assert keys == {"evil-example.net", "other-site.org"}
@@ -200,11 +200,11 @@ class TestFullFlow:
     def test_suspicious_realerts_on_same_ip_new_connection(self, conn):
         h = Harness(conn, HOSTS)
         h.seed_known("chrome", "google.com")
-        h.notified_pairs.add(("chrome", "9.9.9.1"))  # IP deja văzut, "pair" deja notificat
+        h.notified_pairs.add(("chrome", "9.9.9.1"))  # IP deja vazut, "pair" deja notificat
         ds.record_pending(conn, "chrome", "evil-example.net", "domeniu", "t0")
         ds.set_status(conn, "chrome", "evil-example.net", ds.SUSPICIOUS)
         h.cycle([fake_conn("9.9.9.1", local_port=50001)])
-        h.cycle([fake_conn("9.9.9.1", local_port=50002)])  # reconectare = conexiune nouă
+        h.cycle([fake_conn("9.9.9.1", local_port=50002)])  # reconectare = conexiune noua
         assert len(h.alerts("critical")) == 2
 
     def test_suspicious_same_open_connection_does_not_spam(self, conn):
@@ -213,7 +213,7 @@ class TestFullFlow:
         ds.record_pending(conn, "chrome", "evil-example.net", "domeniu", "t0")
         ds.set_status(conn, "chrome", "evil-example.net", ds.SUSPICIOUS)
         for _ in range(10):
-            h.cycle([fake_conn("9.9.9.1")])  # aceeași conexiune, văzută la fiecare secundă
+            h.cycle([fake_conn("9.9.9.1")])  # aceeași conexiune, vazuta la fiecare secunda
         assert len(h.alerts("critical")) == 1
 
     def test_decision_made_in_dashboard_applies_without_restart(self, conn):
@@ -221,20 +221,20 @@ class TestFullFlow:
         h.seed_known("chrome", "google.com")
         h.cycle([fake_conn("9.9.9.1")])                      # devine pending
         ds.set_status(conn, "chrome", "evil-example.net", ds.SUSPICIOUS)  # click în dashboard
-        h.cycle([fake_conn("9.9.9.2", local_port=50001)])    # următorul ciclu
+        h.cycle([fake_conn("9.9.9.2", local_port=50001)])    # urmatorul ciclu
         assert len(h.alerts("critical")) == 1
 
     def test_new_process_first_connection_is_not_pending(self, conn):
         h = Harness(conn, HOSTS)
         h.cycle([fake_conn("9.9.9.1")], name="program-nou")
-        assert h.notifications == [("Conexiune nouă observată", "low")]
+        assert h.notifications == [("Conexiune noua observata", "low")]
         assert ds.list_by_status(conn, ds.PENDING) == []
 
 
 class TestCompanyGrouping:
     def test_many_blocks_of_one_company_make_one_pending_item(self, conn):
         h = Harness(conn, {"34.78.67.1": "x.1e100.net", "172.217.114.5": "y.1e100.net"})
-        h.seed_known("chrome", "evil-example.net")  # chrome nu știe încă Google
+        h.seed_known("chrome", "evil-example.net")  # chrome nu știe înca Google
         h.cycle([fake_conn("34.78.67.1"), fake_conn("172.217.114.5", local_port=50001)])
         pending = ds.list_by_status(conn, ds.PENDING)
         assert [p["group_key"] for p in pending] == ["Google"]
@@ -245,11 +245,11 @@ class TestCompanyGrouping:
         h = Harness(conn, {"2001:4860:4840::1": "a.1e100.net"})
         h.seed_known("chrome", "1e100.net")
         h.cycle([fake_conn("2001:4860:4840::1")])
-        assert h.notifications == [("Conexiune nouă observată", "low")]
+        assert h.notifications == [("Conexiune noua observata", "low")]
         assert ds.list_by_status(conn, ds.PENDING) == []
 
     def test_unknown_network_falls_back_to_exact_destination(self, conn):
-        h = Harness(conn, {})  # fără reverse DNS, bloc nemapat
+        h = Harness(conn, {})  # fara reverse DNS, bloc nemapat
         h.seed_known("chrome", "evil-example.net")
         h.cycle([fake_conn("88.211.219.7")])
         pending = ds.list_by_status(conn, ds.PENDING)

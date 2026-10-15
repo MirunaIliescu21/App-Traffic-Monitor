@@ -1,4 +1,4 @@
-"""Teste pentru curățarea datelor vechi. Rulare: python3 -m pytest test_retention.py -v"""
+"""Teste pentru curațarea datelor vechi. Rulare: python3 -m pytest test_retention.py -v"""
 
 import sqlite3
 from datetime import datetime, timedelta, timezone

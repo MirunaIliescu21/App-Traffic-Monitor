@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
-Retenția datelor: șterge din baza de date ce e prea vechi, ca fișierul să
-nu crească la nesfârșit (în testele noastre: 3 MB -> 78 MB în câteva zile).
+Retenția datelor: șterge din baza de date ce e prea vechi, ca fișierul sa
+nu creasca la nesfârșit (în testele noastre: 3 MB -> 78 MB în câteva zile).
 
-Ce se păstrează, cât timp, și de ce:
-  connections     14 zile  - istoricul brut, 1 rând/conexiune/secundă; analiza
+Ce se pastreaza, cât timp, și de ce:
+  connections     14 zile  - istoricul brut, 1 rând/conexiune/secunda; analiza
                              de risc folosește doar ultimele 24h, deci 14 zile
                              sunt suficiente pentru investigat ce s-a întâmplat
   inbound_events  90 zile  - rare și valoroase (cineva s-a conectat LA tine)
@@ -13,13 +13,13 @@ Ce se păstrează, cât timp, și de ce:
                   destination_status + decision_log (deciziile tale),
                   notified_pairs, risk_alert_state, whitelist_alert_state
 
-IMPORTANT - ce NU face ștergerea: nu micșorează fișierul. SQLite reutilizează
-spațiul eliberat pentru date noi, deci baza nu mai crește, dar rămâne la
-dimensiunea atinsă. Ca să recuperezi spațiul pe disc, oprești watcher-ul și
-rulezi o dată: python3 retention.py --vacuum
+IMPORTANT - ce NU face ștergerea: nu micșoreaza fișierul. SQLite reutilizeaza
+spațiul eliberat pentru date noi, deci baza nu mai crește, dar ramâne la
+dimensiunea atinsa. Ca sa recuperezi spațiul pe disc, oprești watcher-ul și
+rulezi o data: python3 retention.py --vacuum
 
-Rulare manuală (arată ce ar șterge, fără să șteargă):  python3 retention.py --dry-run
-Rulare manuală (șterge):                                 python3 retention.py
+Rulare manuala (arata ce ar șterge, fara sa ștearga):  python3 retention.py --dry-run
+Rulare manuala (șterge):                                 python3 retention.py
 """
 
 import sqlite3
@@ -28,17 +28,17 @@ from datetime import datetime, timedelta, timezone
 
 DB_PATH = "traffic_monitor.db"
 
-# tabel -> (zile păstrate, coloana cu data)
+# tabel -> (zile pastrate, coloana cu data)
 RETENTION_RULES = {
     "connections": (14, "timestamp"),
     "inbound_events": (90, "timestamp"),
 }
 
-BATCH_SIZE = 50_000  # ștergem în loturi, ca să nu blocăm baza (watcher-ul scrie în ea)
+BATCH_SIZE = 50_000  # ștergem în loturi, ca sa nu blocam baza (watcher-ul scrie în ea)
 
 
 def ensure_indexes(conn: sqlite3.Connection) -> None:
-    """Fără index pe dată, fiecare ștergere ar parcurge tot tabelul."""
+    """Fara index pe data, fiecare ștergere ar parcurge tot tabelul."""
     conn.execute("CREATE INDEX IF NOT EXISTS idx_conn_time ON connections (timestamp)")
     conn.commit()
 
@@ -52,8 +52,8 @@ def _table_exists(conn: sqlite3.Connection, table: str) -> bool:
 def purge_old_data(conn: sqlite3.Connection, now: datetime | None = None,
                    rules: dict | None = None, dry_run: bool = False) -> dict:
     """
-    Șterge rândurile mai vechi decât regula fiecărui tabel.
-    Întoarce {tabel: număr_rânduri_șterse} (sau, la dry_run, câte AR fi șterse).
+    Șterge rândurile mai vechi decât regula fiecarui tabel.
+    Întoarce {tabel: numar_rânduri_șterse} (sau, la dry_run, câte AR fi șterse).
     """
     now = now or datetime.now(timezone.utc)
     rules = rules or RETENTION_RULES
@@ -85,7 +85,7 @@ def purge_old_data(conn: sqlite3.Connection, now: datetime | None = None,
 
 
 def vacuum(conn: sqlite3.Connection) -> None:
-    """Recuperează spațiul pe disc. Necesită watcher-ul și dashboard-ul OPRITE."""
+    """Recupereaza spațiul pe disc. Necesita watcher-ul și dashboard-ul OPRITE."""
     conn.execute("VACUUM")
 
 

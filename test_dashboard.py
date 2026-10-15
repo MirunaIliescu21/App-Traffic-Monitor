@@ -122,9 +122,9 @@ class TestStatusApi:
 
 class TestPageEscaping:
     def test_no_untrusted_field_is_interpolated_raw(self):
-        """Orice câmp care vine din rețea/proces trebuie să treacă prin esc() în HTML."""
+        """Orice câmp care vine din rețea/proces trebuie sa treaca prin esc() în HTML."""
         html = dashboard.DASHBOARD_HTML
         for field in ("process_name", "remote_ip", "remote_hostname", "group_key",
                       "sample_hostname", "sample_ip", "raw"):
             raw_uses = re.findall(r"\$\{[a-z]\.%s(?: \|\| '—')?\}" % field, html)
-            assert raw_uses == [], f"{field} inserat fără esc(): {raw_uses}"
+            assert raw_uses == [], f"{field} inserat fara esc(): {raw_uses}"

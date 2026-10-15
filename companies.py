@@ -2,49 +2,49 @@
 """
 Din "2001:4860:4840::/48" in "Google": nume de companii in loc de cifre.
 
-Un utilizator non-tehnic nu poate descifra "13.69.68.0/24", dar ințelege
-"Microsoft". Acest modul traduce o destinație (domeniu sau bloc de IP-uri,
-cum le calculează watcher_v6.get_group_key) in numele companiei care o
-deține, plus o descriere intr-o frază.
+Un utilizator non-tehnic nu poate descifra "13.69.68.0/24", dar intelege
+"Microsoft". Acest modul traduce o destinatie (domeniu sau bloc de IP-uri,
+cum le calculeaza watcher_v6.get_group_key) in numele companiei care o
+detine, plus o descriere intr-o fraza.
 
-DOUĂ SURSE DE CUNOȘTINȚE, ambele liste scrise de mană:
-  1. DOMENII  - sigure: dacă reverse DNS spune "xx.1e100.net", e Google.
+DOUa SURSE DE CUNOȘTINtE, ambele liste scrise de mana:
+  1. DOMENII  - sigure: daca reverse DNS spune "xx.1e100.net", e Google.
   2. PREFIXE  - intervale de IP-uri publice cunoscute ale marilor furnizori.
-               Acoperă adresele FĂRĂ reverse DNS (peste jumătate din ele).
+               Acopera adresele FaRa reverse DNS (peste jumatate din ele).
 
-LIMITĂRI (cunoscute, asumate):
-  - Listele sunt incomplete: o destinație care nu apare in ele rămane
-    "rețea neidentificată". Nu ghicim niciodată o companie.
-  - Prefixele marcate "verificat parțial" vin din surse publice, nu dintr-o
-    bază oficială. inlocuitorul corect e o bază ASN (ex. MaxMind GeoLite2-ASN),
-    care spune pentru ORICE IP cui aparține.
-  - Compania nu spune cine a cumpărat serviciul: un server ținut pe Amazon
-    apare ca "Amazon", fie că e Netflix sau altcineva.
+LIMITaRI (cunoscute, asumate):
+  - Listele sunt incomplete: o destinatie care nu apare in ele ramane
+    "retea neidentificata". Nu ghicim niciodata o companie.
+  - Prefixele marcate "verificat partial" vin din surse publice, nu dintr-o
+    baza oficiala. inlocuitorul corect e o baza ASN (ex. MaxMind GeoLite2-ASN),
+    care spune pentru ORICE IP cui apartine.
+  - Compania nu spune cine a cumparat serviciul: un server tinut pe Amazon
+    apare ca "Amazon", fie ca e Netflix sau altcineva.
 """
 
 import ipaddress
 
-# nume afișat -> descriere (o frază, pentru utilizator)
+# nume afișat -> descriere (o fraza, pentru utilizator)
 COMPANIES = {
-    "Google": "servicii Google (căutare, YouTube, Chrome, Google Cloud)",
+    "Google": "servicii Google (cautare, YouTube, Chrome, Google Cloud)",
     "Microsoft": "servicii Microsoft (Azure, Windows, Office, VS Code)",
-    "Amazon": "Amazon Web Services și CloudFront, care găzduiesc multe site-uri și aplicații",
-    "Cloudflare": "rețea care accelerează și protejează multe site-uri",
+    "Amazon": "Amazon Web Services și CloudFront, care gazduiesc multe site-uri și aplicatii",
+    "Cloudflare": "retea care accelereaza și protejeaza multe site-uri",
     "Meta": "Facebook, Instagram, WhatsApp",
-    "Akamai": "rețea de livrare de conținut, folosită de multe site-uri și aplicații",
-    "Fastly": "rețea de livrare de conținut, folosită de multe site-uri și aplicații",
-    "Edgecast": "rețea de livrare de conținut (folosită și de example.com)",
+    "Akamai": "retea de livrare de continut, folosita de multe site-uri și aplicatii",
+    "Fastly": "retea de livrare de continut, folosita de multe site-uri și aplicatii",
+    "Edgecast": "retea de livrare de continut (folosita și de example.com)",
     "Netflix": "Netflix",
-    "GitHub": "GitHub (aparține Microsoft)",
+    "GitHub": "GitHub (apartine Microsoft)",
     "Spotify": "Spotify",
     "JetBrains": "JetBrains (PyCharm, IntelliJ și celelalte programe JetBrains)",
     "Mozilla": "Mozilla (Firefox)",
     "Canonical": "Canonical (Ubuntu)",
     "Digi": "Digi (RCS & RDS), furnizor de internet și servicii din Romania",
-    "Universitatea Politehnica București": "rețeaua universității (pub.ro)",
+    "Universitatea Politehnica București": "reteaua universitatii (pub.ro)",
 }
 
-# domeniu de bază (cum il intoarce extract_base_domain) -> companie
+# domeniu de baza (cum il intoarce extract_base_domain) -> companie
 DOMAIN_COMPANIES = {
     # Google
     "1e100.net": "Google", "googleusercontent.com": "Google", "google.com": "Google",
@@ -72,7 +72,7 @@ DOMAIN_COMPANIES = {
     "edgekey.net": "Akamai", "akamaized.net": "Akamai",
     "fastly.net": "Fastly", "fastlylb.net": "Fastly",
     "edgecastcdn.net": "Edgecast", "edgio.net": "Edgecast",
-    # alții
+    # altii
     "netflix.com": "Netflix", "nflxso.net": "Netflix", "nflxvideo.net": "Netflix",
     "nflxext.com": "Netflix", "nflximg.net": "Netflix",
     "github.com": "GitHub", "githubusercontent.com": "GitHub", "githubassets.com": "GitHub",
@@ -85,7 +85,7 @@ DOMAIN_COMPANIES = {
     "pub.ro": "Universitatea Politehnica București",
 }
 
-# companie -> intervale de IP-uri (CIDR). "vp" = verificat parțial (vezi docstring)
+# companie -> intervale de IP-uri (CIDR). "vp" = verificat partial (vezi docstring)
 _PREFIXES_BY_COMPANY = {
     "Google": [
         "2001:4860::/32", "2a00:1450::/32", "2607:f8b0::/32", "2404:6800::/32",
@@ -123,7 +123,7 @@ _PREFIXES_BY_COMPANY = {
     "Universitatea Politehnica București": ["141.85.0.0/16"],
 }
 
-# listă plată (rețea, companie), cea mai specifică (prefix cel mai lung) prima
+# lista plata (retea, companie), cea mai specifica (prefix cel mai lung) prima
 PREFIX_COMPANIES = sorted(
     ((ipaddress.ip_network(cidr), company)
      for company, cidrs in _PREFIXES_BY_COMPANY.items() for cidr in cidrs),
@@ -133,7 +133,7 @@ PREFIX_COMPANIES = sorted(
 
 
 def company_for(group_key: str, group_type: str) -> str | None:
-    """Compania care deține destinația, sau None dacă nu o știm (nu ghicim)."""
+    """Compania care detine destinatia, sau None daca nu o știm (nu ghicim)."""
     if group_type == "domeniu":
         return DOMAIN_COMPANIES.get(group_key.lower())
     if group_type in ("subnet", "ip"):
@@ -149,8 +149,8 @@ def company_for(group_key: str, group_type: str) -> str | None:
 
 def entity_for(group_key: str, group_type: str) -> tuple[str, str]:
     """
-    Unitatea după care ținem minte și decidem: compania, dacă o știm,
-    altfel destinația exactă. intoarce (cheie, tip); tipul e "companie"
+    Unitatea dupa care tinem minte și decidem: compania, daca o știm,
+    altfel destinatia exacta. intoarce (cheie, tip); tipul e "companie"
     pentru companii.
     """
     company = company_for(group_key, group_type)
@@ -160,9 +160,9 @@ def entity_for(group_key: str, group_type: str) -> tuple[str, str]:
 
 
 def display(entity_key: str, entity_type: str) -> tuple[str, str]:
-    """(titlu, descriere) pentru utilizator - fără cifre acolo unde se poate."""
+    """(titlu, descriere) pentru utilizator - fara cifre acolo unde se poate."""
     if entity_type == "companie":
         return entity_key, COMPANIES.get(entity_key, "")
     if entity_type == "domeniu":
-        return entity_key, "adresă de internet pe care n-o recunosc din lista mea de companii"
-    return "o rețea neidentificată", f"bloc de adrese {entity_key}, care nu apare in lista mea de companii"
+        return entity_key, "adresa de internet pe care n-o recunosc din lista mea de companii"
+    return "o retea neidentificata", f"bloc de adrese {entity_key}, care nu apare in lista mea de companii"

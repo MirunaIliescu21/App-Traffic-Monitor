@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
-Etapa 1: Colector proces <-> conexiune de rețea.
+Etapa 1: Colector proces <-> conexiune de retea.
 
-Rulează periodic, citește conexiunile active de pe sistem (TCP/UDP),
-le asociază cu procesul care le-a deschis (PID, nume, hash binar)
-și le salvează în SQLite pentru analiza ulterioară (baseline + detecție).
+Ruleaza periodic, citește conexiunile active de pe sistem (TCP/UDP),
+le asociaza cu procesul care le-a deschis (PID, nume, hash binar)
+și le salveaza în SQLite pentru analiza ulterioara (baseline + detectie).
 
 Rulare: sudo python3 collector.py
 (are nevoie de sudo pentru a vedea toate conexiunile, nu doar ale userului curent)
@@ -23,7 +23,7 @@ POLL_INTERVAL_SECONDS = 1
 
 
 def init_db(db_path: str) -> sqlite3.Connection:
-    """Creează schema dacă nu există deja."""
+    """Creeaza schema daca nu exista deja."""
     conn = sqlite3.connect(db_path)
     conn.execute("""
         CREATE TABLE IF NOT EXISTS connections (
@@ -41,7 +41,7 @@ def init_db(db_path: str) -> sqlite3.Connection:
             status TEXT
         )
     """)
-    # Index pentru interogări rapide pe proces + timp, utile la faza de baseline
+    # Index pentru interogari rapide pe proces + timp, utile la faza de baseline
     conn.execute("""
         CREATE INDEX IF NOT EXISTS idx_process_time
         ON connections (process_name, timestamp)
@@ -52,9 +52,9 @@ def init_db(db_path: str) -> sqlite3.Connection:
 
 def hash_binary(path: str) -> str | None:
     """
-    Calculează SHA256 al binarului executabilului.
-    Util mai tarziu pentru a detecta dacă binarul s-a schimbat
-    (semn posibil de compromitere/backdoor) între rulări.
+    Calculeaza SHA256 al binarului executabilului.
+    Util mai tarziu pentru a detecta daca binarul s-a schimbat
+    (semn posibil de compromitere/backdoor) între rulari.
     """
     if not path:
         return None
@@ -71,7 +71,7 @@ def hash_binary(path: str) -> str | None:
 def get_process_info(pid: int, cache: dict) -> tuple[str, str, str]:
     """
     Functia returneaza numele, path-ul și hash-ul unui proces si
-    face cache simplu ca să nu recalculăm hash-ul de fiecare dată (e costisitor).
+    face cache simplu ca sa nu recalculam hash-ul de fiecare data (e costisitor).
     """
     if pid in cache:
         return cache[pid]
@@ -89,19 +89,19 @@ def get_process_info(pid: int, cache: dict) -> tuple[str, str, str]:
 
 
 def collect_once(conn: sqlite3.Connection, process_cache: dict) -> int:
-    """O singură trecere de colectare. Întoarce numărul de conexiuni salvate."""
+    """O singura trecere de colectare. Întoarce numarul de conexiuni salvate."""
     timestamp = datetime.now(timezone.utc).isoformat()
     rows = []
 
     # kind="inet" prinde atat TCP cat și UDP, IPv4 și IPv6
     for conn_info in psutil.net_connections(kind="inet"):
-        # Ne interesează doar conexiunile cu adresă la distanță (nu porturile locale în ascultare fără peer)
+        # Ne intereseaza doar conexiunile cu adresa la distanta (nu porturile locale în ascultare fara peer)
         if not conn_info.raddr:
             continue
 
         pid = conn_info.pid
         if pid is None:
-            continue  # conexiune orfană / kernel, greu de atribuit unui proces
+            continue  # conexiune orfana / kernel, greu de atribuit unui proces
 
         name, exe_path, binary_hash = get_process_info(pid, process_cache)
         protocol = "TCP" if conn_info.type == 1 else "UDP"
@@ -147,7 +147,7 @@ def main():
             elapsed = time.time() - start
             print(f"[{datetime.now().strftime('%H:%M:%S')}] {n} conexiuni salvate ({elapsed:.2f}s)")
 
-            # golim cache-ul din cand în cand, ca să prindem procese noi/schimbate
+            # golim cache-ul din cand în cand, ca sa prindem procese noi/schimbate
             if len(process_cache) > 500:
                 process_cache.clear()
 

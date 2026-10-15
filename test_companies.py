@@ -1,4 +1,4 @@
-"""Teste pentru maparea destinațiilor pe companii, inclusiv pe lista reală a utilizatorului."""
+"""Teste pentru maparea destinațiilor pe companii, inclusiv pe lista reala a utilizatorului."""
 
 import os
 
@@ -34,7 +34,7 @@ class TestCompanyFor:
         assert companies.company_for("nu-e-ip", "subnet") is None
 
     def test_ipv4_and_ipv6_never_cross_match(self):
-        # un bloc IPv6 nu are voie să potrivească un prefix IPv4 și invers
+        # un bloc IPv6 nu are voie sa potriveasca un prefix IPv4 și invers
         assert companies.company_for("::/48", "subnet") is None
 
     def test_domain_lookup_is_case_insensitive(self):
@@ -54,16 +54,16 @@ class TestEntityAndDisplay:
 
     def test_display_unknown_network_hides_numbers_from_title(self):
         title, desc = companies.display("88.211.219.0/24", "subnet")
-        assert title == "o rețea neidentificată" and "88.211.219.0/24" in desc
+        assert title == "o rețea neidentificata" and "88.211.219.0/24" in desc
 
     def test_every_company_in_mappings_has_a_description(self):
         used = set(companies.DOMAIN_COMPANIES.values()) | {c for _, c in companies.PREFIX_COMPANIES}
         assert used <= set(companies.COMPANIES), used - set(companies.COMPANIES)
 
 
-@pytest.mark.skipif(not os.path.exists(REAL_KEYS), reason="lista reală lipsește")
+@pytest.mark.skipif(not os.path.exists(REAL_KEYS), reason="lista reala lipsește")
 def test_real_user_destinations_collapse_to_few_entities():
-    """Datele reale: 97 de destinații trebuie să devină puține entități, cu o singură neidentificată."""
+    """Datele reale: 97 de destinații trebuie sa devina puține entitați, cu o singura neidentificata."""
     rows = [l.strip().split("|", 1) for l in open(REAL_KEYS, encoding="utf-8") if l.strip()]
     entities = {companies.entity_for(k, t) for t, k in rows}
     unknown = [e for e in entities if e[1] != "companie"]
