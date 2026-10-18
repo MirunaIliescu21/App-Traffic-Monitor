@@ -165,6 +165,25 @@ pentru o companie noua, `COMPANIES` (cu o descriere), apoi rulezi
 `python3 -m pytest -q test_companies.py` si repornesti watcher-ul. Randurile
 existente din "De verificat" se contopesc automat pe noua companie.
 
+## Cum identifica aplicatia o destinatie
+
+Pentru fiecare destinatie contactata, aplicatia incearca, in ordine:
+
+1. **Liste scrise de mana** (`companies.py`): domenii cunoscute (ex. `github.com`) si blocuri de adrese ale unor companii mari. Daca gaseste o potrivire, destinatia primeste numele companiei.
+2. **Baza ASN locala** (`asn.db`): pentru adrese care nu apar in liste, se afla ce organizatie le anunta pe internet. Daca ASN-ul apartine unei companii din `ASN_COMPANIES`, se foloseste numele companiei; altfel organizatia apare cu numele ei din baza publica (ex. `AS399358`).
+3. **Destinatia exacta**, daca nu se potriveste nimic (un domeniu necunoscut sau un bloc de adrese neidentificat).
+
+Deciziile utilizatorului ("E normal" / "Nu recunosc") se aplica la nivelul entitatii rezultate, nu al fiecarei adrese. Baza ASN vine de la [iptoasn.com](https://iptoasn.com) (domeniu public) si se descarca local, pe fiecare calculator:
+
+```bash
+python3 asn.py --update      # prima instalare si apoi cam o data pe luna
+python3 asn.py --lookup 8.8.8.8
+python3 asn.py --check       # ASN-urile mapate pe companii
+systemctl --user restart trafficmonitor-watcher trafficmonitor-dashboard
+```
+
+**Limite:** un ASN spune cine anunta adresa, nu cine foloseste serverul (un site gazduit pe Amazon apare ca "Amazon"). Domeniile necunoscute nu trec prin baza ASN. Fara `asn.db` aplicatia merge, dar identifica mai putine destinatii.
+
 ## Retentia datelor (`retention.py`)
 
 Ruleaza automat la pornirea watcher-ului si la fiecare 6 ore.

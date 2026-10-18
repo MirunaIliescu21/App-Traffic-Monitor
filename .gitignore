@@ -29,3 +29,8 @@ venv/
 strip_diacritics.py
 watcher_v6_hmm_bun.py
 watcherul_test_watcher_hmmm_bun.py
+
+# baza de date ASN
+asn.db
+asn_build_*.db
+ip2asn-combined.tsv*

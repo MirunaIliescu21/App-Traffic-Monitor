@@ -7,17 +7,21 @@ Un utilizator non-tehnic nu poate descifra "13.69.68.0/24", dar intelege
 cum le calculeaza watcher_v6.get_group_key) in numele companiei care o
 detine, plus o descriere intr-o fraza.
 
-DOUa SURSE DE CUNOSTINtE, ambele liste scrise de mana:
-  1. DOMENII  - sigure: daca reverse DNS spune "xx.1e100.net", e Google.
-  2. PREFIXE  - intervale de IP-uri publice cunoscute ale marilor furnizori.
-               Acopera adresele FaRa reverse DNS (peste jumatate din ele).
+TREI SURSE DE CUNOSTINTE, in aceasta ordine:
+  1. DOMENII  - liste scrise de mana, sigure: daca reverse DNS spune
+               "xx.1e100.net", e Google.
+  2. PREFIXE  - intervale de IP-uri ale marilor furnizori, scrise de mana.
+               Acopera adresele FARA reverse DNS.
+  3. ASN      - baza publica iptoasn.com (asn.py), pentru orice adresa pe care
+               listele nu o stiu. ASN-urile mari sunt legate de o companie
+               (ASN_COMPANIES); restul devin o entitate "AS12345" cu numele
+               organizatiei. Fara asn.db, acest pas se sare.
 
-LIMITaRI (cunoscute, asumate):
-  - Listele sunt incomplete: o destinatie care nu apare in ele ramane
+LIMITARI (cunoscute, asumate):
+  - O destinatie pe care nici listele, nici baza ASN n-o stiu ramane
     "retea neidentificata". Nu ghicim niciodata o companie.
   - Prefixele marcate "verificat partial" vin din surse publice, nu dintr-o
-    baza oficiala. inlocuitorul corect e o baza ASN (ex. MaxMind GeoLite2-ASN),
-    care spune pentru ORICE IP cui apartine.
+    baza oficiala.
   - Compania nu spune cine a cumparat serviciul: un server tinut pe Amazon
     apare ca "Amazon", fie ca e Netflix sau altcineva.
 """
@@ -98,9 +102,8 @@ _PREFIXES_BY_COMPANY = {
         "20.32.0.0/11", "20.64.0.0/10", "20.128.0.0/9",    # Azure
         "13.64.0.0/11", "13.104.0.0/14",                    # Azure + servicii Microsoft
         "40.64.0.0/10", "51.136.0.0/15", "51.140.0.0/14",
-        "51.10.0.0/15", "51.132.0.0/16",    # AS8075, confirmat pe bgp.he.net
-        "52.160.0.0/11",    # AS8075, confirmat pe bgp.he.net (include 52.168.x.x)
         "52.168.0.0/16", "104.40.0.0/13", "104.208.0.0/13",
+        "51.10.0.0/15", "52.160.0.0/11", "51.132.0.0/16",
         "4.144.0.0/12", "4.192.0.0/10",                     # vp: Azure, confirmat din liste publice
         "2603:1000::/24", "2620:1ec::/36", "2a01:111::/32",
     ],
@@ -147,15 +150,53 @@ def company_for(group_key: str, group_type: str) -> str | None:
     return None
 
 
+# ASN-uri cunoscute -> companie. Pentru adrese care nu apar in listele de mai sus,
+# baza ASN (asn.py) spune cui apartin; daca ASN-ul e aici, folosim numele companiei,
+# altfel ASN-ul insusi devine "entitatea" (ex. AS399358). Verificare: python3 asn.py --check
+ASN_COMPANIES = {
+    15169: "Google", 36040: "Google", 396982: "Google", 19527: "Google",
+    8075: "Microsoft", 8068: "Microsoft", 8069: "Microsoft", 3598: "Microsoft",
+    16509: "Amazon", 14618: "Amazon", 8987: "Amazon", 7224: "Amazon",
+    13335: "Cloudflare", 209242: "Cloudflare",
+    32934: "Meta", 63293: "Meta",
+    20940: "Akamai", 16625: "Akamai", 12222: "Akamai", 21342: "Akamai", 35994: "Akamai",
+    54113: "Fastly",
+    2906: "Netflix",
+    36459: "GitHub",
+    41231: "Canonical",
+    8708: "Digi",
+}
+
+
+def asn_for(group_key: str, group_type: str) -> int | None:
+    """ASN-ul unui bloc de adrese (dupa prima adresa din bloc), sau None."""
+    if group_type not in ("subnet", "ip"):
+        return None
+    try:
+        net = ipaddress.ip_network(group_key, strict=False)
+    except ValueError:
+        return None
+    import asn
+    return asn.lookup(str(net.network_address))
+
+
 def entity_for(group_key: str, group_type: str) -> tuple[str, str]:
     """
-    Unitatea dupa care tinem minte si decidem: compania, daca o stim,
-    altfel destinatia exacta. intoarce (cheie, tip); tipul e "companie"
-    pentru companii.
+    Unitatea dupa care tinem minte si decidem. In ordine:
+      1. compania, daca o stim din domenii sau prefixe scrise de mana;
+      2. compania sau organizatia din baza ASN (tip "companie" sau "asn");
+      3. altfel destinatia exacta (domeniu sau bloc de adrese).
+    Intoarce (cheie, tip).
     """
     company = company_for(group_key, group_type)
     if company:
         return company, "companie"
+    asn_number = asn_for(group_key, group_type)
+    if asn_number:
+        company = ASN_COMPANIES.get(asn_number)
+        if company:
+            return company, "companie"
+        return f"AS{asn_number}", "asn"
     return group_key, group_type
 
 
@@ -165,4 +206,16 @@ def display(entity_key: str, entity_type: str) -> tuple[str, str]:
         return entity_key, COMPANIES.get(entity_key, "")
     if entity_type == "domeniu":
         return entity_key, "adresa de internet pe care n-o recunosc din lista mea de companii"
+    if entity_type == "asn":
+        import asn
+        try:
+            details = asn.info(int(entity_key.removeprefix("AS")))
+        except ValueError:
+            details = None
+        if details:
+            country, name = details
+            title = asn.clean_name(name) or entity_key
+            where = f", {country}" if country else ""
+            return title, f"organizatie din baza publica de retele ({entity_key}{where}), care nu apare in lista mea de companii"
+        return entity_key, "retea din baza publica ASN, care nu apare in lista mea de companii"
     return "o retea neidentificata", f"bloc de adrese {entity_key}, care nu apare in lista mea de companii"
