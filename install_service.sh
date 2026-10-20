@@ -7,7 +7,7 @@
 set -euo pipefail
 
 UNIT_DIR="$HOME/.config/systemd/user"
-SERVICES=(trafficmonitor-watcher trafficmonitor-dashboard)
+SERVICES=(trafficmonitor-watcher trafficmonitor-dashboard trafficmonitor-phishing)
 
 if [ "$(id -u)" -eq 0 ]; then
   echo "Nu rula cu sudo. Ruleaza ca utilizator obisnuit." >&2; exit 1
@@ -31,8 +31,9 @@ PYTHON="${PYTHON:-$(command -v python3)}"
   exit 1
 }
 
-if systemctl --user is-active --quiet trafficmonitor-watcher.service || pgrep -f "watcher_v6.py" >/dev/null; then
-  echo "Un watcher ruleaza deja (terminal sau serviciu). Opreste-l (Ctrl+C) si ruleaza din nou." >&2
+# un watcher pornit "de mana" intr-un terminal ar dubla colectarea; serviciul propriu se reinstaleaza fara probleme
+if ! systemctl --user is-active --quiet trafficmonitor-watcher.service && pgrep -f "watcher_v6.py" >/dev/null; then
+  echo "Un watcher ruleaza deja intr-un terminal. Opreste-l (Ctrl+C) si ruleaza din nou." >&2
   exit 1
 fi
 
@@ -67,11 +68,29 @@ RestartSec=5
 WantedBy=default.target
 UNIT
 
+cat > "$UNIT_DIR/trafficmonitor-phishing.service" <<UNIT
+[Unit]
+Description=TrafficMonitor - avertizare phishing (domenii care imita branduri)
+
+[Service]
+WorkingDirectory=$APP_DIR
+ExecStart=$PYTHON -u $APP_DIR/phishing_watcher.py
+Environment=DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/%U/bus
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target
+UNIT
+
 systemctl --user daemon-reload
-for s in "${SERVICES[@]}"; do systemctl --user enable --now "$s.service"; done
+for s in "${SERVICES[@]}"; do
+  systemctl --user enable "$s.service"
+  systemctl --user restart "$s.service"
+done
 
 echo
 echo "Instalat. Pornesc automat la fiecare login."
-echo "  Stare:   systemctl --user status trafficmonitor-watcher trafficmonitor-dashboard"
-echo "  Loguri:  journalctl --user -u trafficmonitor-watcher -f"
+echo "  Stare:   systemctl --user status trafficmonitor-watcher trafficmonitor-dashboard trafficmonitor-phishing"
+echo "  Loguri:  journalctl --user -u trafficmonitor-watcher -f   (sau ...-phishing)"
 echo "  Dashboard: http://localhost:5000"

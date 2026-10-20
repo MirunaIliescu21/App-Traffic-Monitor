@@ -246,18 +246,36 @@ testele sa nu scrie in `alerts.log`-ul real.
 - Gruparea pe companii a redus lista "de verificat" de la 29 la 10 pe datele
   reale
 
-## Urmatorii pasi
+## Avertizare de phishing (Firefox)
 
-- Rularea ca serviciu (un singur proces, pornit odata cu sistemul;
-  rezolva conflictul `sudo` vs. notificari)
-- Test pe 2-3 masini: cate alerte false pe zi, ce procent din destinatii e
-  identificat pe date pe care lista nu le-a vazut
-- Baza ASN pentru identificarea oricarei adrese (ex. iptoasn.com, domeniu
-  public - verificat termenii licentei inainte de distribuire)
-- Lista de sufixe publice pentru `extract_base_domain` (domenii tip
-  `ceva.co.uk`)
-- Fisier local de mapari (`companies_local.json`), fara editarea codului
-- Versiuni pentru Windows si macOS
+Pe langa monitorizarea conexiunilor, aplicatia te avertizeaza cand deschizi in Firefox un site al carui nume **imita un brand cunoscut** (OLX, banci, curieri, WhatsApp...), de exemplu `olx-plata.ro` sau `bcr-securizat.top`. Scopul: sa afli *inainte* sa introduci parole sau date de card.
+
+**Cum functioneaza.** Un proces separat (`phishing_watcher.py`, serviciul `trafficmonitor-phishing`) citeste la fiecare 2 secunde istoricul Firefox (o copie a fisierului `places.sqlite`, fara drepturi de administrator) si verifica fiecare domeniu nou cu `phishing_check.py`. Verificarea e locala si offline: nimic nu paraseste calculatorul.
+
+**Ce detecteaza** (`phishing_check.py`):
+- numele unui brand in alt domeniu (`olx-plata.ro`) sau ca subdomeniu al altui site (`olx.ro.verificare.com`);
+- litere sau cifre care imita litere (`0lx-plata.ro`, `paypa1.com`, litere chirilice);
+- greseli de scriere intentionate la nume lungi (`faancourier.ro`);
+- semnale slabe (adresa numerica, extensii ieftine, multe cratime), care singure nu declanseaza alerta.
+
+Fiecare brand are domeniile lui oficiale in lista `BRANDS` din `phishing_check.py`; acolo adaugi branduri noi. Domeniile oficiale trebuie verificate de om pe site-ul real al brandului.
+
+**Cand alerteaza.** De la scorul 60, cu o notificare critica (ramane pe ecran pana o inchizi) si o linie `[PHISHING ...]` in `alerts.log`. Orice intrare deliberata pe un site suspect alerteaza de fiecare data (adresa tastata, bookmark, tab nou, link, reincarcare). Se strang intr-o singura alerta doar redirecturile si navigarea in interiorul aceluiasi site, in 60 de secunde.
+
+**Confidentialitate.** In baza de date (`phishing_events`) se retine doar numele domeniului suspect, nu adresa completa (poate contine token-uri), si nicio pagina normala.
+
+**Cum il testezi in siguranta** (fara sa deschizi site-uri reale): in Firefox deschide `http://olx-test1.localhost:5000/`. Adresa duce doar la dashboard-ul tau local, iar numele contine "olx", deci apare alerta. Foloseste alt nume la fiecare test (`olx-test2`...), ca sa fie un domeniu nou.
+
+```bash
+python3 phishing_watcher.py                          # in terminal, pentru test
+journalctl --user -u trafficmonitor-phishing -f      # jurnalul serviciului
+```
+
+**Limite (importante):**
+- Doar **Firefox**, si nu vede **ferestrele private** (nu lasa nimic in istoric). Pentru Chrome/Edge trebuie un adaptor separat; acoperirea completa cere o extensie de browser.
+- Istoricul vede *sosirea* pe o pagina, nu ce se intampla dupa: un refresh (F5) sau un formular trimis nu apar ca vizita noua.
+- Prinde doar brandurile din lista `BRANDS`. Un site de phishing cu un nume fara legatura cu vreun brand cunoscut nu e detectat.
+- Notificarile sunt testate doar pe Linux (macOS scris, netestat; Windows lipseste: alerta ramane doar in `alerts.log`).
 
 ## Mediu de testare
 

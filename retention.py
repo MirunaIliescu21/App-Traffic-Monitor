@@ -32,6 +32,7 @@ DB_PATH = "traffic_monitor.db"
 RETENTION_RULES = {
     "connections": (14, "timestamp"),
     "inbound_events": (90, "timestamp"),
+    "phishing_events": (90, "timestamp"),
 }
 
 BATCH_SIZE = 50_000  # stergem in loturi, ca sa nu blocam baza (watcher-ul scrie in ea)
