@@ -138,7 +138,7 @@ class TestCrossSiteProtection:
 class TestPage:
     def test_page_has_banner_card_and_tile(self, client):
         html = client.get("/", base_url=BASE).get_data(as_text=True)
-        for needle in ("phishing-banner", "phishing-list", "stat-phishing", "render_phishing", "/api/phishing"):
+        for needle in ("phishing-banner", "phishing-list", "tile-phishing", "render_phishing", "/api/phishing"):
             assert needle in html
 
     def test_phishing_lines_in_the_journal_are_highlighted(self):
@@ -150,3 +150,32 @@ class TestPage:
         for field in ("host", "brand", "reasons", "official", "kind", "score"):
             raw_uses = re.findall(r"\$\{[ax]\.%s\}" % field, html)
             assert raw_uses == [], f"{field} inserat fara esc(): {raw_uses}"
+
+
+class TestPagesAndNavigation:
+    ROUTES = ("#/phishing", "#/de-verificat", "#/programe", "#/jurnal", "#/conexiuni-primite")
+
+    def test_every_route_has_a_menu_link_and_js_entry(self, client):
+        html = client.get("/", base_url=BASE).get_data(as_text=True)
+        for route in self.ROUTES:
+            assert f'href="{route}"' in html
+            assert f"'{route[1:]}'" in html            # si in tabela JS ROUTES
+
+    def test_every_page_section_exists(self, client):
+        html = client.get("/", base_url=BASE).get_data(as_text=True)
+        for page in ("home", "phishing", "pending", "programs", "log", "inbound"):
+            assert f'data-page="{page}"' in html
+            assert f'data-route="{page}"' in html
+
+    def test_home_has_status_banner_and_four_tiles(self, client):
+        html = client.get("/", base_url=BASE).get_data(as_text=True)
+        for needle in ('id="hero"', "home-phishing", "tile-phishing", "tile-pending", "tile-log", "tile-programs"):
+            assert needle in html
+
+    def test_old_technical_counter_is_gone_from_home(self, client):
+        html = client.get("/", base_url=BASE).get_data(as_text=True)
+        assert "Conexiuni externe (24h)" not in html
+
+    def test_connection_count_is_on_the_programs_page(self, client):
+        html = client.get("/", base_url=BASE).get_data(as_text=True)
+        assert 'id="total-24h"' in html and "total_connections_24h" in html
