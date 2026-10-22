@@ -21,6 +21,8 @@ from flask import Flask, jsonify, render_template_string, request
 
 import companies
 import destination_status as ds
+import phishing_check
+import phishing_store as pstore
 
 DB_PATH = "traffic_monitor.db"
 ALERTS_LOG_PATH = "alerts.log"
@@ -39,6 +41,7 @@ def get_db():
     conn = sqlite3.connect(DB_PATH, timeout=10)
     conn.row_factory = sqlite3.Row
     ds.init_tables(conn)  # no-op daca exista; dashboard-ul poate porni inaintea watcher-ului
+    pstore.init_tables(conn)
     return conn
 
 
@@ -113,6 +116,20 @@ def _with_display(row: dict) -> dict:
     return {**row, "title": title, "description": description}
 
 
+def _phishing_row(row: dict) -> dict:
+    """Adauga adresa oficiala a brandului imitat (pentru mesajul din banda)."""
+    brand = phishing_check.BRANDS.get(row.get("brand") or "")
+    return {**row, "official": brand["domains"][0] if brand else None}
+
+
+def read_phishing(conn) -> dict:
+    return {
+        "active": [_phishing_row(r) for r in pstore.active_alerts(conn)],
+        "recent": [_phishing_row(r) for r in pstore.grouped_events(conn, 20)],
+        "allowlist": pstore.list_allowlist(conn),
+    }
+
+
 # ---------- API endpoints ----------
 
 @app.route("/api/status")
@@ -131,6 +148,7 @@ def api_status():
               ds.list_by_status(conn, ds.NORMAL, 100) + ds.list_by_status(conn, ds.SUSPICIOUS, 100)]
     marked.sort(key=lambda d: d["decided_at"] or "", reverse=True)
     decision_log = ds.list_decision_log(conn, 30)
+    phishing = read_phishing(conn)
 
     # numar total de conexiuni din ultimele 24h
     cutoff = (datetime.now(timezone.utc) - timedelta(hours=24)).isoformat()
@@ -147,6 +165,7 @@ def api_status():
         "pending": pending,
         "marked": marked,
         "decision_log": decision_log,
+        "phishing": phishing,
         "generated_at": datetime.now(timezone.utc).strftime("%H:%M:%S UTC"),
     })
 
@@ -191,6 +210,42 @@ def api_decision():
     if not found:
         return jsonify({"error": "destinatia nu exista"}), 404
     return jsonify({"ok": True, "status": status})
+
+
+PHISHING_ACTIONS = ("dismiss", "allow", "unallow")
+
+
+@app.route("/api/phishing", methods=["POST"])
+def api_phishing():
+    """
+    Decizia utilizatorului despre o alerta de phishing: {host, action}.
+    Aceeasi protectie ca la /api/decision: un site de phishing nu trebuie sa-si poata
+    amuti singur alerta trimitand o cerere catre dashboard-ul local.
+    """
+    if not _request_is_trusted():
+        return jsonify({"error": "cerere refuzata"}), 403
+    data = request.get_json(silent=True) or {}
+    host = data.get("host")
+    action = data.get("action")
+    if (not isinstance(host, str) or not host or len(host) > 253
+            or action not in PHISHING_ACTIONS):
+        return jsonify({"error": "date invalide"}), 400
+    host = host.lower()
+    conn = get_db()
+    if conn is None:
+        return jsonify({"error": "baza de date lipseste"}), 503
+    try:
+        if action == "dismiss":
+            ok = pstore.dismiss(conn, host) > 0
+        elif action == "allow":
+            ok = pstore.allow(conn, host)
+        else:
+            ok = pstore.unallow(conn, host)
+    finally:
+        conn.close()
+    if not ok:
+        return jsonify({"error": "domeniul nu exista"}), 404
+    return jsonify({"ok": True})
 
 
 # ---------- Interfata web ----------
@@ -375,6 +430,21 @@ DASHBOARD_HTML = """<!DOCTYPE html>
   .pending-actions { display: flex; gap: 8px; }
   .card-attention { border-color: rgba(210,153,34,0.5); }
 
+  /* Phishing */
+  .banner-phishing {
+    background: rgba(248,81,73,0.12);
+    border: 1px solid var(--danger);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .banner-phishing .banner-item { padding: 14px 16px; border-bottom: 1px solid rgba(248,81,73,0.3); }
+  .banner-phishing .banner-item:last-child { border-bottom: none; }
+  .banner-title { font-size: 15px; font-weight: 700; color: var(--danger); }
+  .banner-text { margin-top: 4px; }
+  .banner-sub { margin-top: 4px; color: var(--muted); font-size: 12px; font-family: var(--mono); word-break: break-all; }
+  .banner-actions { margin-top: 10px; display: flex; gap: 8px; flex-wrap: wrap; }
+  .stat-danger .stat-value { color: var(--danger); }
+
   .empty { padding: 20px 16px; color: var(--muted); font-style: italic; font-size: 13px; }
 
   /* Bara de progres pentru #conexiuni */
@@ -394,11 +464,18 @@ DASHBOARD_HTML = """<!DOCTYPE html>
 
 <main>
 
+  <!-- Alerte de phishing active: banda ramane vizibila pana o inchizi -->
+  <div id="phishing-banner"></div>
+
   <!-- Statistici rapide -->
   <div class="stat-bar" id="stat-bar">
     <div class="stat">
       <div class="stat-value" id="stat-total">—</div>
       <div class="stat-label">Conexiuni externe (24h)</div>
+    </div>
+    <div class="stat" id="stat-phishing-box">
+      <div class="stat-value" id="stat-phishing">—</div>
+      <div class="stat-label">Alerte phishing active</div>
     </div>
     <div class="stat">
       <div class="stat-value" id="stat-pending">—</div>
@@ -416,6 +493,21 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       <div class="stat-value" id="stat-alerts">—</div>
       <div class="stat-label">Alerte in jurnal</div>
     </div>
+  </div>
+
+  <!-- Site-uri suspecte deschise in browser -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">🎣 Site-uri suspecte deschise</div>
+      <div class="card-count" id="phishing-count">—</div>
+    </div>
+    <div class="card-intro">
+      Paginile deschise in Firefox al caror nume imita un brand cunoscut (OLX, banci, curieri).
+      Se vad doar paginile deschise, nu si ferestrele private. Daca un site e de fapt real,
+      apasa „Este site-ul real” si nu te mai anunt pentru el.
+    </div>
+    <div id="phishing-list"></div>
+    <div id="phishing-allow"></div>
   </div>
 
   <!-- Destinatii de verificat: decizia utilizatorului -->
@@ -531,7 +623,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
 
 <script>
 // Textele din retea (nume de host, procese) sunt controlate de terti: le
-// escapam iNAINTE sa ajunga in HTML, altfel un nume de host rau intentionat
+// escapam INAINTE sa ajunga in HTML, altfel un nume de host rau intentionat
 // ar rula cod in pagina.
 function esc(v) {
   return String(v ?? '').replace(/[&<>"']/g, c => (
@@ -576,7 +668,7 @@ function render_marked(list) {
     return `
       <div class="pending-item">
         <div class="pending-text">
-          <div class="pending-title"><strong>${esc(x.process_name)}</strong> -> ${esc(x.title)}
+          <div class="pending-title"><strong>${esc(x.process_name)}</strong> → ${esc(x.title)}
             <span class="badge ${bad ? 'badge-danger' : 'badge-ok'}">${bad ? 'Nu recunosc' : 'Normal'}</span></div>
           <div class="pending-sub">decis ${fmt_dt(x.decided_at)}</div>
         </div>
@@ -590,10 +682,74 @@ function render_marked(list) {
 function render_log(list) {
   document.getElementById('log-count').textContent = list.length;
   document.getElementById('log-list').innerHTML = list.length ? list.map(x => `
-    <div class="alert-line">${fmt_dt(x.timestamp)} · ${esc(x.process_name)} -> ${esc(x.group_key)}:
-      ${esc(STATUS_LABEL[x.old_status] || x.old_status)} -> <strong>${esc(STATUS_LABEL[x.new_status] || x.new_status)}</strong></div>
+    <div class="alert-line">${fmt_dt(x.timestamp)} · ${esc(x.process_name)} → ${esc(x.group_key)}:
+      ${esc(STATUS_LABEL[x.old_status] || x.old_status)} → <strong>${esc(STATUS_LABEL[x.new_status] || x.new_status)}</strong></div>
   `).join('') : '<div class="empty">Nicio decizie in istoric.</div>';
 }
+
+function render_phishing(p) {
+  const active = p.active;
+  document.getElementById('stat-phishing').textContent = active.length;
+  document.getElementById('stat-phishing-box').classList.toggle('stat-danger', active.length > 0);
+
+  const btn = (host, action, label, cls) =>
+    `<button class="btn ${cls}" data-phish-action="${action}" data-phish-host="${esc(host)}">${label}</button>`;
+
+  document.getElementById('phishing-banner').innerHTML = active.length ? `
+    <div class="banner-phishing">${active.slice(0, 3).map(a => `
+      <div class="banner-item">
+        <div class="banner-title">⚠️ ${a.brand ? 'Site care seamana cu ' + esc(a.brand) : 'Site suspect'}: ${esc(a.host)}</div>
+        <div class="banner-text">${a.official ? 'Adresa oficiala ' + esc(a.brand) + ' este <strong>' + esc(a.official) + '</strong>. ' : ''}Nu introduce parole sau date de card pe acest site. Daca ai facut-o deja: blocheaza cardul si schimba parola acum.</div>
+        <div class="banner-sub">${esc(a.reasons)} · ${fmt_dt(a.timestamp)}</div>
+        <div class="banner-actions">
+          ${btn(a.host, 'dismiss', 'Am inteles', 'btn-ghost')}
+          ${btn(a.host, 'allow', 'Este site-ul real', 'btn-ok')}
+        </div>
+      </div>`).join('')}
+      ${active.length > 3 ? `<div class="banner-item banner-sub">si inca ${active.length - 3} alerte, mai jos</div>` : ''}
+    </div>` : '';
+
+  document.getElementById('phishing-count').textContent = p.recent.length;
+  document.getElementById('phishing-list').innerHTML = p.recent.length ? p.recent.map(x => `
+    <div class="pending-item">
+      <div class="pending-text">
+        <div class="pending-title"><strong>${esc(x.host)}</strong>
+          <span class="badge ${x.alerted ? 'badge-danger' : 'badge-warning'}">${esc(x.score)}/100</span>
+          ${x.brand ? '<span class="muted">seamana cu ' + esc(x.brand) + '</span>' : ''}</div>
+        <div class="pending-desc">${esc(x.reasons)}</div>
+        <div class="pending-sub">${x.visits > 1 ? '×' + esc(x.visits) + ' deschideri · prima ' + fmt_dt(x.first_seen) + ' · ultima ' + fmt_dt(x.last_seen) : fmt_dt(x.last_seen)} · prin ${esc(x.kind)}</div>
+      </div>
+      <div class="pending-actions">${x.alerted ? btn(x.host, 'allow', 'Este site-ul real', 'btn-ok') : ''}</div>
+    </div>`).join('') : '<div class="empty">Niciun site suspect deschis — bine!</div>';
+
+  document.getElementById('phishing-allow').innerHTML = p.allowlist.length ? `
+    <div class="card-intro" style="border-top:1px solid var(--border);border-bottom:none">Marcate ca reale:</div>` +
+    p.allowlist.map(x => `
+    <div class="pending-item">
+      <div class="pending-text"><div class="pending-title">${esc(x.host)}</div>
+        <div class="pending-sub">din ${fmt_dt(x.added_at)}</div></div>
+      <div class="pending-actions">${btn(x.host, 'unallow', 'Anuleaza', 'btn-ghost')}</div>
+    </div>`).join('') : '';
+}
+
+document.addEventListener('click', async (ev) => {
+  const pbtn = ev.target.closest('button[data-phish-action]');
+  if (!pbtn) return;
+  const host = pbtn.dataset.phishHost, action = pbtn.dataset.phishAction;
+  if (action === 'allow' && !confirm('Sigur este site-ul real? Nu vei mai primi alerte pentru ' + host + '.')) return;
+  pbtn.disabled = true;
+  try {
+    const res = await fetch('/api/phishing', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({host, action}),
+    });
+    if (!res.ok) alert('Nu am putut salva decizia (' + res.status + ').');
+  } catch (e) {
+    alert('Nu am putut salva decizia: ' + e.message);
+  }
+  await refresh();
+});
 
 document.addEventListener('click', async (ev) => {
   const btn = ev.target.closest('button[data-action]');
@@ -646,6 +802,7 @@ async function refresh() {
     document.getElementById('stat-total').textContent = d.total_connections_24h.toLocaleString();
     document.getElementById('stat-pending').textContent = d.pending.length;
     document.getElementById('stat-processes').textContent = d.process_summary.length;
+    render_phishing(d.phishing);
     render_pending(d.pending);
     render_marked(d.marked);
     render_log(d.decision_log);
@@ -673,7 +830,7 @@ async function refresh() {
     document.getElementById('alert-count').textContent = d.recent_alerts.length + ' alerte';
     document.getElementById('alert-list').innerHTML = d.recent_alerts.length
       ? d.recent_alerts.map(a => {
-          const cls = (a.raw.includes('[INBOUND]') || a.raw.includes('[NU-RECUNOSC]')) ? 'is-inbound'
+          const cls = (a.raw.includes('[INBOUND]') || a.raw.includes('[NU-RECUNOSC]') || a.raw.includes('[PHISHING')) ? 'is-inbound'
                     : a.raw.includes('[RISC')     ? 'is-risk'
                     : '';
           return `<div class="alert-line ${cls}">${esc(a.raw)}</div>`;

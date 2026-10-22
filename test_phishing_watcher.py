@@ -185,6 +185,40 @@ class TestDeliberateVersusSameNavigation:
         assert len(hosts) <= 2
 
 
+class TestAllowlist:
+    def test_allowed_domain_is_ignored_and_not_stored(self, conn, rec):
+        verdict = pw.process_visit(conn, visit("olx-plata.ro"), {}, rec.notify, rec.log,
+                                   allowlist=frozenset({"olx-plata.ro"}))
+        assert verdict is None
+        assert rec.notifications == []
+        assert conn.execute("SELECT COUNT(*) FROM phishing_events").fetchone()[0] == 0
+
+    def test_subdomain_of_an_allowed_domain_is_ignored(self, conn, rec):
+        assert pw.process_visit(conn, visit("www.olx-plata.ro"), {}, rec.notify, rec.log,
+                                allowlist=frozenset({"olx-plata.ro"})) is None
+
+    def test_other_domains_still_alert(self, conn, rec):
+        pw.process_visit(conn, visit("bcr-securizat.top"), {}, rec.notify, rec.log,
+                         allowlist=frozenset({"olx-plata.ro"}))
+        assert len(rec.notifications) == 1
+
+    def test_allowing_in_the_dashboard_takes_effect_on_the_next_poll(self, tmp_path, conn, rec):
+        """Fluxul real: alerta -> utilizatorul apasa 'Este site-ul real' -> vizita urmatoare e ignorata."""
+        places = str(tmp_path / "places.sqlite")
+        make_places(places, []).close()
+        watcher = bh.HistoryWatcher([places], lookback_seconds=0, now=1_000)
+        last_seen = {}
+        add_visit(places, 1, 2_000_000, "https://olx-plata.ro/", vtype=2)
+        assert pw.poll_once(conn, watcher, last_seen, rec.notify, rec.log) == 1
+
+        from phishing_store import allow
+        assert allow(conn, "olx-plata.ro") is True
+
+        add_visit(places, 2, 2_000_100, "https://olx-plata.ro/", vtype=2)
+        assert pw.poll_once(conn, watcher, last_seen, rec.notify, rec.log) == 0
+        assert len(rec.notifications) == 1
+
+
 class TestRestart:
     def test_last_seen_is_restored_from_the_database(self, conn, rec):
         run(conn, visit("olx-plata.ro", when=1_000_000), {}, rec)

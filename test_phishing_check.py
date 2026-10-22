@@ -59,6 +59,14 @@ class TestBrandImpersonationAlerts:
         assert v.alert, (host, v)
         assert v.brand and v.official_domain
 
+    def test_real_case_olx_ro_as_subdomain_of_another_site(self):
+        """
+        Caz real (escrocherie pe OLX): adresa incepe cu 'olx.ro-', deci in bara de adrese
+        pare 'olx.ro', dar domeniul adevarat e '...-livraure.world'.
+        """
+        v = check_domain("olx.ro-livraure.world")
+        assert v.alert and v.brand == "OLX" and v.official_domain == "olx.ro"
+
     def test_brand_and_official_domain_reported(self):
         v = check_domain("olx-plata.ro")
         assert v.brand == "OLX"

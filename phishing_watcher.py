@@ -30,6 +30,7 @@ from datetime import datetime, timezone
 import browser_history as bh
 import notifier
 import phishing_check as pc
+import phishing_store as store
 
 DB_PATH = "traffic_monitor.db"
 POLL_SECONDS = 2
@@ -42,20 +43,7 @@ RESCAN_SECONDS = 60            # cat de des cautam Firefox cand nu e instalat/ga
 
 
 def init_tables(conn: sqlite3.Connection) -> None:
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS phishing_events (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            timestamp TEXT NOT NULL,
-            host TEXT NOT NULL,
-            score INTEGER NOT NULL,
-            brand TEXT,
-            reasons TEXT,
-            kind TEXT,
-            alerted INTEGER NOT NULL DEFAULT 0
-        )
-    """)
-    conn.execute("CREATE INDEX IF NOT EXISTS idx_phishing_time ON phishing_events (timestamp)")
-    conn.commit()
+    store.init_tables(conn)
 
 
 def load_last_seen(conn: sqlite3.Connection) -> dict:
@@ -92,11 +80,14 @@ def is_duplicate(visit, last_seen, visit_hosts) -> bool:
 
 
 def process_visit(conn, visit, last_seen, notify_fn=notifier.notify, log_fn=notifier.log_alert,
-                  visit_hosts=None):
+                  visit_hosts=None, allowlist=frozenset()):
     """
     Verifica o vizita. Intoarce verdictul daca s-a retinut ceva (suspect), altfel None.
     `last_seen` si `visit_hosts` (id vizita -> domeniu, pentru navigarea interna) se actualizeaza pe loc.
+    Domeniile din `allowlist` (marcate "este site-ul real" de utilizator) sunt ignorate.
     """
+    if store.is_allowed(visit.host, allowlist):
+        return None
     verdict = pc.check_domain(visit.host)
     if verdict.score == 0:
         return None
@@ -133,8 +124,12 @@ def poll_once(conn, watcher, last_seen, notify_fn=notifier.notify, log_fn=notifi
               visit_hosts=None) -> int:
     """O runda: ia vizitele noi si le verifica. Intoarce cate au fost retinute ca suspecte."""
     kept = 0
-    for visit in watcher.poll():
-        if process_visit(conn, visit, last_seen, notify_fn, log_fn, visit_hosts) is not None:
+    visits = watcher.poll()
+    if not visits:
+        return 0
+    allowlist = store.load_allowlist(conn)       # citita la fiecare runda: "este site-ul real" are efect imediat
+    for visit in visits:
+        if process_visit(conn, visit, last_seen, notify_fn, log_fn, visit_hosts, allowlist) is not None:
             kept += 1
     return kept
 

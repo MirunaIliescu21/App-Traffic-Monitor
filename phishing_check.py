@@ -63,7 +63,7 @@ _TWO_PART_SUFFIXES = {
 
 _CHEAP_TLDS = {"top", "xyz", "click", "icu", "buzz", "tk", "gq", "ml", "cf", "ga", "cyou", "sbs", "rest", "cam"}
 _BAIT_WORDS = {"login", "verify", "verifica", "secure", "securizat", "plata", "payment", "pay", "confirm",
-               "confirma", "update", "cont", "card", "account", "colet", "awb", "ramburs"}
+               "confirma", "update", "cont", "card", "account", "colet", "awb", "ramburs", "livrare"}
 
 # litere chirilice/grecesti si cifre care seamana cu litere latine
 _CONFUSABLES = str.maketrans({

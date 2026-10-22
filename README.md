@@ -277,6 +277,24 @@ journalctl --user -u trafficmonitor-phishing -f      # jurnalul serviciului
 - Prinde doar brandurile din lista `BRANDS`. Un site de phishing cu un nume fara legatura cu vreun brand cunoscut nu e detectat.
 - Notificarile sunt testate doar pe Linux (macOS scris, netestat; Windows lipseste: alerta ramane doar in `alerts.log`).
 
+### Interfata de phishing (dashboard)
+
+Alertele de phishing apar in dashboard (`http://localhost:5000`) in trei locuri:
+
+- **Banda rosie** din varful paginii, pentru alertele din ultimele 24 de ore pe care nu le-ai inchis: site-ul, brandul imitat, adresa oficiala si ce sa faci (nu introduce date de card; daca ai facut-o deja, blocheaza cardul si schimba parola). Ramane vizibila si dupa ce notificarea de pe desktop a disparut.
+- **Contorul „Alerte phishing active"** din randul de statistici.
+- **Cardul „Site-uri suspecte deschise"**: un rand per domeniu, cu numarul de deschideri (`x4 deschideri`), prima si ultima data si motivul in cuvinte simple. Semnalele slabe (adresa numerica, extensii ieftine) apar aici, in portocaliu, fara notificare.
+
+Liniile `[PHISHING ...]` din jurnalul de alerte sunt colorate in rosu.
+
+**Ce poti face:**
+- **„Am inteles"** ascunde banda pentru acea alerta. O vizita noua la acelasi site o aduce inapoi.
+- **„Este site-ul real"** (cu confirmare) opreste alertele pentru domeniu si subdomeniile lui. Domeniul iese din card si apare in lista „Marcate ca reale", de unde il readuci cu „Anuleaza". Istoricul ramane in baza de date.
+
+**Protectie:** butoanele trec prin aceeasi verificare ca „E normal" (adresa dashboard-ului, originea cererii, tip JSON). Un site de phishing deschis intr-un alt tab nu poate trimite o cerere catre `localhost:5000` ca sa-si amuteasca singur alerta. Aplicatia accepta in lista „reale" doar domenii pe care le-a semnalat ea insasi.
+
+**Date stocate:** tabelele `phishing_events` (doar domeniul, fara adresa completa; sterse automat dupa 90 de zile) si `phishing_allowlist`.
+
 ## Mediu de testare
 
 - Ubuntu 24.04 ca host
