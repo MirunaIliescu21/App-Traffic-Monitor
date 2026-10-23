@@ -263,12 +263,48 @@ DASHBOARD_HTML = """<!DOCTYPE html>
     --border: #30363d;
     --text: #e6edf3;
     --muted: #8b949e;
-    --accent: #58a6ff;
+    --accent: #4090c6;
+    --brand: #4090c6;
     --danger: #f85149;
     --warning: #d29922;
     --ok: #3fb950;
+    --row-line: #1c2128;
+    --accent-tint: rgba(64, 144, 198, 0.08);
+    --on-badge: #0d1117;
     --mono: 'Courier New', monospace;
   }
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme]) {
+      --bg: #f6f8fa;
+      --surface: #ffffff;
+      --border: #d0d7de;
+      --text: #1f2328;
+      --muted: #59636e;
+      --accent: #2b6f9e;
+      --danger: #cf222e;
+      --warning: #9a6700;
+      --ok: #1a7f37;
+      --row-line: #e6eaee;
+      --accent-tint: rgba(64, 144, 198, 0.08);
+      --on-badge: #ffffff;
+    }
+  }
+  :root[data-theme="light"] {
+    --bg: #f6f8fa;
+    --surface: #ffffff;
+    --border: #d0d7de;
+    --text: #1f2328;
+    --muted: #59636e;
+    --accent: #2b6f9e;
+    --danger: #cf222e;
+    --warning: #9a6700;
+    --ok: #1a7f37;
+    --row-line: #e6eaee;
+    --accent-tint: rgba(64, 144, 198, 0.08);
+    --on-badge: #ffffff;
+  }
+  :root[data-theme="dark"] { color-scheme: dark; }
+  :root[data-theme="light"] { color-scheme: light; }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -292,7 +328,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
     z-index: 10;
   }
 
-  .logo { font-size: 18px; font-weight: 700; color: var(--accent); letter-spacing: -0.5px; }
+  .logo { font-size: 18px; font-weight: 700; color: var(--brand); letter-spacing: -0.5px; }
   .logo span { color: var(--muted); font-weight: 400; }
 
   .status-dot {
@@ -310,6 +346,8 @@ DASHBOARD_HTML = """<!DOCTYPE html>
     50% { opacity: 0.4; }
   }
 
+  .theme-btn { margin-left: auto; }
+  .theme-btn + .status-dot { margin-left: 0; }
   .updated-at { color: var(--muted); font-size: 12px; font-family: var(--mono); }
 
   main { padding: 20px 24px; display: grid; gap: 20px; max-width: 1400px; margin: 0 auto; }
@@ -366,13 +404,13 @@ DASHBOARD_HTML = """<!DOCTYPE html>
 
   td {
     padding: 8px 16px;
-    border-bottom: 1px solid #1c2128;
+    border-bottom: 1px solid var(--row-line);
     font-size: 13px;
     font-family: var(--mono);
   }
 
   tr:last-child td { border-bottom: none; }
-  tr:hover td { background: rgba(88, 166, 255, 0.04); }
+  tr:hover td { background: var(--accent-tint); }
 
   .proc-name { color: var(--accent); }
   .ip-addr { color: var(--text); }
@@ -393,7 +431,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
   /* Alerte */
   .alert-line {
     padding: 8px 16px;
-    border-bottom: 1px solid #1c2128;
+    border-bottom: 1px solid var(--row-line);
     font-family: var(--mono);
     font-size: 12px;
     color: var(--muted);
@@ -419,7 +457,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
 
   .card-intro { padding: 12px 16px; color: var(--muted); font-size: 13px; border-bottom: 1px solid var(--border); }
   .pending-item {
-    padding: 12px 16px; border-bottom: 1px solid #1c2128;
+    padding: 12px 16px; border-bottom: 1px solid var(--row-line);
     display: flex; gap: 16px; align-items: center; flex-wrap: wrap;
   }
   .pending-item:last-child { border-bottom: none; }
@@ -456,15 +494,15 @@ DASHBOARD_HTML = """<!DOCTYPE html>
   /* ===== Navigare, pagini, stare generala, casete ===== */
   [hidden] { display: none !important; }
   header { flex-wrap: wrap; }
-  nav { display: flex; gap: 4px; flex-wrap: wrap; margin-left: 16px; }
+  nav { display: flex; gap: 2px; flex-wrap: wrap; margin-left: 8px; }
   nav a {
     color: var(--muted); text-decoration: none; font-size: 14px; font-weight: 600;
-    padding: 6px 12px; border-radius: 6px; border: 1px solid transparent;
+    padding: 6px 10px; border-radius: 6px; border: 1px solid transparent;
   }
   nav a:hover { color: var(--text); background: rgba(139,148,158,0.12); }
   nav a.active { color: var(--text); background: var(--surface); border-color: var(--border); }
   .nav-badge { display: inline-block; min-width: 18px; padding: 0 6px; margin-left: 4px; border-radius: 9px;
-    font-size: 11px; font-weight: 700; text-align: center; color: #0d1117; }
+    font-size: 11px; font-weight: 700; text-align: center; color: var(--on-badge); }
   .nav-danger { background: var(--danger); }
   .nav-warn { background: var(--warning); }
 
@@ -491,8 +529,8 @@ DASHBOARD_HTML = """<!DOCTYPE html>
   @media (max-width: 900px) { .tiles { grid-template-columns: repeat(2, 1fr); } }
   .tile { display: block; text-decoration: none; color: var(--text); background: var(--surface);
     border: 1px solid var(--border); border-radius: 10px; padding: 18px 20px; }
-  .tile:hover { border-color: var(--accent); background: rgba(88,166,255,0.06); }
-  .tile-value { font-size: 36px; font-weight: 700; font-family: var(--mono); color: var(--accent); }
+  .tile:hover { border-color: var(--accent); background: var(--accent-tint); }
+  .tile-value { font-size: 36px; font-weight: 700; font-family: var(--mono); color: var(--brand); }
   .tile-label { font-size: 15px; font-weight: 600; margin-top: 2px; }
   .tile-hint { color: var(--muted); font-size: 12px; margin-top: 4px; }
   .tile-danger { border-color: var(--danger); }
@@ -516,6 +554,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
     <a href="#/conexiuni-primite" data-route="inbound">Conexiuni primite <span class="nav-badge nav-danger" id="nav-inbound" hidden></span></a>
   </nav>
   <div class="updated-at" id="updated-at">\u2014</div>
+  <button class="btn btn-ghost theme-btn" id="theme-btn" type="button">Mod deschis</button>
   <div class="status-dot" id="status-dot"></div>
 </header>
 
@@ -706,6 +745,28 @@ function fmt_dt(ts) {
   } catch { return ts.substring(0,16); }
 }
 
+// ---------- Tema (deschisa / inchisa) ----------
+
+function current_theme() {
+  const set = document.documentElement.dataset.theme;
+  if (set) return set;
+  return window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+}
+function show_theme_label() {
+  document.getElementById('theme-btn').textContent = current_theme() === 'light' ? 'Mod inchis' : 'Mod deschis';
+}
+try {
+  const saved = localStorage.getItem('tm-theme');
+  if (saved === 'light' || saved === 'dark') document.documentElement.dataset.theme = saved;
+} catch (e) { /* fara stocare: ramane tema sistemului */ }
+document.getElementById('theme-btn').addEventListener('click', () => {
+  const next = current_theme() === 'light' ? 'dark' : 'light';
+  document.documentElement.dataset.theme = next;
+  try { localStorage.setItem('tm-theme', next); } catch (e) { /* ignorat */ }
+  show_theme_label();
+});
+show_theme_label();
+
 // ---------- Navigare intre pagini (fara reincarcare) ----------
 
 const ROUTES = {
@@ -812,7 +873,7 @@ function render_phishing(p) {
         <div class="pending-sub">${x.visits > 1 ? '\u00d7' + esc(x.visits) + ' deschideri \u00b7 prima ' + fmt_dt(x.first_seen) + ' \u00b7 ultima ' + fmt_dt(x.last_seen) : fmt_dt(x.last_seen)} \u00b7 prin ${esc(x.kind)}</div>
       </div>
       <div class="pending-actions">${x.alerted ? phish_btn(x.host, 'allow', 'Este site-ul real', 'btn-ok') : ''}</div>
-    </div>`).join('') : '<div class="empty">Niciun site suspect deschis \u2014 bine!</div>';
+    </div>`).join('') : '<div class="empty">Niciun site suspect deschis!</div>';
 
   document.getElementById('phishing-allow').innerHTML = p.allowlist.length ? `
     <div class="card-intro" style="border-top:1px solid var(--border);border-bottom:none">Marcate ca reale:</div>` +
@@ -844,7 +905,7 @@ function render_pending(list) {
           <button class="btn btn-bad" data-action="suspicious" ${attrs}>Nu recunosc</button>
         </div>
       </div>`;
-  }).join('') : '<div class="empty">Nimic de verificat \u2014 totul e la zi.</div>';
+  }).join('') : '<div class="empty">Nimic de verificat - totul e la zi.</div>';
 }
 
 function render_marked(list) {
